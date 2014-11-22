@@ -1,34 +1,21 @@
 
-
-#include <list>
-
+#ifndef CALENDAR_H
+#define CALENDAR_H
+ 
+ 
+ #include <list>
+ #include "transactions.h"
+ 
 #define DEBUG
 
+/*namespace Internal {
+	size_t Time = 0; // simulation time
+}*/
 
 
 
-class Facility
-{
-	/* ??? */
-};
 
 
-class Action
-{
-  protected:
-  	double schedule_time;
-	std::string name_;
-	virtual void Behavior() = 0;
-	
-	
-  public:
-	virtual ~Action();
-	void scheduleAt( double t );
-	std::string name() { return name_; }
-	double time_start() { return schedule_time; }
-	
-	
-};
 
 typedef std::list<Action*> calendar_list;
 
@@ -57,9 +44,7 @@ class Calendar
 
 };
 
+#endif /* CALENDAR_H */
 
-namespace Internal {
-	size_t Time = 0; // simulation time
-}
 
 

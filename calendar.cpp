@@ -1,37 +1,12 @@
 
-#include <cstdlib>
+
 #include <iostream>
 #include <string>
-#include <random>
+
 #include <algorithm>
 #include <vector>
 #include "calendar.h"
 
-
-
-
-
-class Event : public Action
-{
-  public:
-	void Activate(double time = 0);
-	Event(std::string name) { name_ = name; }
-	void Behavior() {}
-	
-};
-
-
-inline void Event::Activate(double time)
-{
-	Action::scheduleAt(time);
-}
-
-
-class Process : public Action
-{
-	void Activate(double time = 0);
-	void Passivate();
-};
 
 
 
@@ -141,16 +116,7 @@ Calendar::~Calendar()
 	std::cerr << "Warning: Calendar destoyed.\n";
 }
 
-inline void Action::scheduleAt( double t )
-{ 
-	schedule_time = t; 
-	Calendar::instance()->Schedule(this); 
-}
 
-Action::~Action()
-{
-	;
-}
 
 void Calendar::destroy_instance()
 {
@@ -158,29 +124,3 @@ void Calendar::destroy_instance()
 	instance_ = nullptr; 
 }
 
-
-int main(int argc, char* argv[])
-{
-	if(argc != 2)
-	{
-		std::cerr << "Usage: ./calendar NUM_EVENTS\n";
-		return EXIT_FAILURE;
-	}
-
-	std::random_device rd;
-    std::mt19937 gen(rd());
-	std::uniform_real_distribution<> dis(1, 5);
-
-	
-	int i = 0;
-	while( i < atoi(argv[1]) )
-	{
-		std::string name("Event " + std::to_string(i) );
-		(new Event(name))->Activate(dis(gen));
-		i++;
-	}
-	Calendar::instance()->dumpCalendar();
-	Calendar::instance()->destroy_instance();
-	
-	return EXIT_SUCCESS;
-}
