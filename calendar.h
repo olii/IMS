@@ -41,7 +41,7 @@ class Calendar
 	static Calendar* instance();
 	void clean();
 	~Calendar();
-	Calendar();
+	
 	void destroy_instance();
 	
 	
@@ -50,6 +50,7 @@ class Calendar
 #endif
 
   private:
+	Calendar();
     size_t calendar_size;
 	calendar_list* data;  
 	static Calendar* instance_;
