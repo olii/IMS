@@ -12,16 +12,22 @@
 #include "core.h"
 
 
+namespace Internal {
+	long double Time = 0; // simulation time
+}
+
+
+
 /*****************************************
  * Action
   ****************************************/
 
 
-void Action::scheduleAt( double t )
+/*void Action::scheduleAt( double t )
 { 
 	schedule_time = t; 
 	Calendar::instance()->Schedule(this); 
-}
+}*/
 
 Action::~Action()
 {
@@ -36,7 +42,7 @@ Action::~Action()
  * Event
   ****************************************/
 
-/*inline void Event::Activate(double time)
+/*void Event::Activate(double time)
 {
 	Action::scheduleAt(time);
 }*/
@@ -64,12 +70,9 @@ Action::~Action()
  * Calendar
   ****************************************/
 
- 
 #define DEBUG
 
-/*namespace Internal {
-	size_t Time = 0; // simulation time
-}*/
+
 
 
 
@@ -157,6 +160,21 @@ void Calendar::Schedule( Action* a )
 	}
 }
 
+
+
+Action* Calendar::GetFirst()
+{
+	return data->front();
+}
+
+void Calendar::delete_first()
+{
+	delete *data->begin();
+	data->pop_front(); 
+	calendar_size--;
+}
+
+
 Calendar::~Calendar()
 { 
 	for(auto it: *data )
@@ -177,12 +195,31 @@ void Calendar::destroy_instance()
 }
 
 
- 
+/****************************************
+ * Simulator
+ ****************************************/
  
 
  void Run()
 {
+#ifdef DEBUG
 	Calendar::instance()->dumpCalendar();
+	std::cout << std::endl << "====== RUN ======" << std::endl;
+#endif	
+	
+	while( !Calendar::instance()->empty() )
+	{
+		Action* event = Calendar::instance()->GetFirst();
+		Internal::Time = event->time_start();
+		std::cout << "Current simulation time: " << Internal::Time << " ";
+		event->Behavior();
+		Calendar::instance()->delete_first();
+	}
+	
+#ifdef DEBUG	
+	std::cout << std::endl;
+#endif	
+
 	Calendar::instance()->destroy_instance();
 } 
  

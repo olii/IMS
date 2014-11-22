@@ -13,10 +13,12 @@ class Action;
 typedef std::list<Action*> calendar_list;
 
 
+
+
 class Calendar
 {
   public:
-	Action* GetFirst(); // remove first item from calendar
+	Action* GetFirst(); 
 	void Schedule( Action* a ); // schedule action a at time t
 	static Calendar* instance()
 	{
@@ -24,11 +26,13 @@ class Calendar
 			instance_ = new Calendar; 
 		return instance_;
 	}
-	void clean();
+
 	~Calendar();
-	
 	void destroy_instance();
 	
+	bool empty() { return data->empty(); }
+	void delete_first();
+	long int Size() { return calendar_size; }
 	
 #ifdef DEBUG
 	void dumpCalendar(); // print current content of calendar to stdout
@@ -36,7 +40,7 @@ class Calendar
 
   private:
 	Calendar();
-    size_t calendar_size;
+    long int calendar_size;
 	calendar_list* data;  
 	static Calendar* instance_;
 
@@ -50,15 +54,14 @@ class Action // metaobject
   protected:
   	double schedule_time;
 	std::string name_;
-	virtual void Behavior() = 0;
-	
 	
   public:
+    virtual void Behavior() = 0;
 	virtual ~Action();
-	void scheduleAt( double t );
-	{ 
-		schedule_time = t; 
-		Calendar::instance()->Schedule(this); 
+	void scheduleAt( double t )
+	{
+	  schedule_time = t; 
+	  Calendar::instance()->Schedule(this);
 	}
 
 
@@ -73,6 +76,7 @@ class Event : public Action
 {
   public:
 	void Activate(double time = 0) { Action::scheduleAt(time); }
+	
 	explicit Event(std::string name) { name_ = name; }
 	
 };
@@ -92,7 +96,7 @@ class Process : public Action
 
 
 
- /* Simulator */
+/* Simulator */
 void Run();
 
 

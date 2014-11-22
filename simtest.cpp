@@ -13,7 +13,7 @@ class CustomEvent: public Event
   public:
 	void Behavior()
 	{
-		std::cout << "I'm here! " << std::endl;
+		std::cout << name() << ": This is my behavior." << std::endl;
 	}
 
 	explicit CustomEvent(std::string name) : Event(name) { }
@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 		i++;
 	}
 
+	
 	Run();
 
 
