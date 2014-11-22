@@ -4,7 +4,8 @@
 #include <iostream>
 #include <string>
 
-#include "simulator.h"
+
+#include "core.h"
 
 
 class CustomEvent: public Event
@@ -24,7 +25,7 @@ class CustomEvent: public Event
 
 int main(int argc, char* argv[])
 {
-	using namespace sim;
+	
 
 	if(argc != 2)
 	{

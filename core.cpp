@@ -1,13 +1,75 @@
 
 
+
+
+
+
 #include <iostream>
 #include <string>
-
 #include <algorithm>
 #include <vector>
-#include "calendar.h"
+
+#include "core.h"
 
 
+/*****************************************
+ * Action
+  ****************************************/
+
+
+void Action::scheduleAt( double t )
+{ 
+	schedule_time = t; 
+	Calendar::instance()->Schedule(this); 
+}
+
+Action::~Action()
+{
+	;
+}
+
+
+
+
+
+/*****************************************
+ * Event
+  ****************************************/
+
+/*inline void Event::Activate(double time)
+{
+	Action::scheduleAt(time);
+}*/
+
+
+
+/*****************************************
+ * Process
+  ****************************************/
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ /*****************************************
+ * Calendar
+  ****************************************/
+
+ 
+#define DEBUG
+
+/*namespace Internal {
+	size_t Time = 0; // simulation time
+}*/
 
 
 
@@ -46,19 +108,9 @@ void Calendar::dumpCalendar()
 #endif
 
 
+
 /* singleton instance */
 Calendar* Calendar::instance_ = nullptr;
-
-
-inline Calendar* Calendar::instance()
-{
-	if( instance_ == nullptr ) 
-      instance_ = new Calendar; 
-
-	return instance_;
-}
-
-
 
 
 void Calendar::Schedule( Action* a )
@@ -113,7 +165,7 @@ Calendar::~Calendar()
 	}
 
 	delete data;
-	std::cerr << "Warning: Calendar destoyed.\n";
+	std::cerr << "Warning: Calendar destroyed.\n";
 }
 
 
@@ -124,3 +176,20 @@ void Calendar::destroy_instance()
 	instance_ = nullptr; 
 }
 
+
+ 
+ 
+
+ void Run()
+{
+	Calendar::instance()->dumpCalendar();
+	Calendar::instance()->destroy_instance();
+} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
