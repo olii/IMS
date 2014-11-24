@@ -1,232 +1,99 @@
-
-
-
-
-
-
-#include <iostream>
-#include <string>
-#include <algorithm>
-#include <vector>
-
 #include "core.h"
+#include <vector>
+#include <algorithm>
+#include <float.h>
+#include <iostream>
 
 
 namespace Internal {
-	long double Time = 0; // simulation time
+    long double Time = 0; // simulation time
+    long double TimeStop = DBL_MAX;
+
+    int GenerateID()
+    {
+        static int s_nID = 0;
+        return s_nID++;
+    }
+}
+
+void MetaEntity::scheduleAt(double t, Fptr callback)
+{
+    {
+      Calendar::instance().Schedule(*this, callback, t, _prioriy); // TODO Priority
+    }
 }
 
 
-
-/*****************************************
- * Action
-  ****************************************/
-
-
-/*void Action::scheduleAt( double t )
-{ 
-	schedule_time = t; 
-	Calendar::instance()->Schedule(this); 
-}*/
-
-Action::~Action()
+void Calendar::Dump()
 {
-	;
+    using namespace std;
+    cout << "------------------------\n";
+    cout  << "Calendar::Dump()\n";
+    cout << "------------------------\n";
+
+    vector<double> scheduled_times;
+
+    for(auto &it: calendar)
+    {
+        cout << it.GetTarget().name() << "(Scheduled at: " << it.GetTime() << " prio=" << int(it.GetPriority()) << ")" << endl;
+        scheduled_times.push_back(it.GetTime());
+    }
+
+    cout << "------------------------\n";
+
+    if( is_sorted(scheduled_times.begin(),scheduled_times.end()) )
+        cout << "Events are sorted: OK" << endl;
+    else
+    cout << "Events are sorted: FAIL" << endl;
+}
+
+void Calendar::Schedule(MetaEntity &t, MetaEntity::Fptr ptr, double time, uint8_t priority)
+{
+    CalendarItem item(t, ptr, time, priority);
+
+    for( auto it = calendar.begin(); it != calendar.end(); it++ ) {
+      if ( *it <= item ) {
+          continue;
+      }
+      else {
+          calendar.insert(it, item);
+          return;
+      }
+    }
+    calendar.push_back(item);
 }
 
 
-
-
-
-/*****************************************
- * Event
-  ****************************************/
-
-/*void Event::Activate(double time)
+void Run()
 {
-	Action::scheduleAt(time);
-}*/
+    std::cout << std::endl << "====== RUN ======" << std::endl;
+    cout.precision(6);
+    while( !Calendar::instance().Empty() )
+    {
+        CalendarItem item = Calendar::instance().Next();
+        Internal::Time = item.GetTime();
+        if ( Internal::Time > Internal::TimeStop )
+        {
+            Calendar::instance().Clear();
+            std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
+            return;
+        }
+        //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
+        std::cout << "Current simulation time: " << std::fixed  << Internal::Time << " ";
+        item.Execute(); // event->Behavior();
 
+    }
+    std::cout << std::endl;
+}
 
-
-/*****************************************
- * Process
-  ****************************************/
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- /*****************************************
- * Calendar
-  ****************************************/
-
-#define DEBUG
-
-
-
-
-
-Calendar::Calendar()
+double Time()
 {
-	data = new calendar_list;
+    return Internal::Time;
 }
 
 
-
-#ifdef DEBUG
-void Calendar::dumpCalendar()
+void InitTime(double start, double end)
 {
-	using namespace std;
-	cout << "------------------------\n"; 
-	cout  << "Calendar::dumpCalendar()\n";
-	cout << "------------------------\n";
-	
-	vector<double> scheduled_times;
-
-	for(auto it: *data)
-	{
-		cout << it->name() << "(Scheduled at: " << it->time_start() << ")" << endl;
-		scheduled_times.push_back(it->time_start());
-	}
-	
-	cout << "------------------------\n";
-	
-	if( is_sorted(scheduled_times.begin(),scheduled_times.end()) )
-		cout << "Events are sorted: OK" << endl;
-	else
-		cout << "Events are sorted: FAIL" << endl;
-	
-	
+    Internal::Time = start;
+    Internal::TimeStop = end;
 }
-#endif
-
-
-
-/* singleton instance */
-Calendar* Calendar::instance_ = nullptr;
-
-
-void Calendar::Schedule( Action* a )
-{
-	// prazdny kalendar
-	if( data->empty() )
-	{
-		data->push_front(a);
-		calendar_size = 1;
-	}
-	
-	// kalendar s jednym prvkom
-	else if( calendar_size == 1 )
-	{
-		// porovnam a vlozim
-		if( a->time_start() > (*data->begin())->time_start() )
-			data->insert(++(data->begin()),a);
-		else
-			data->push_front(a);
-		calendar_size++;	
-	}
-	
-	else
-	{  // 2+ prvkov, hladam kde mam vlozit
-		calendar_list::iterator it = data->begin();
-
-		while( it != data->end() )
-		{
-			if( (*it)->time_start() > a->time_start() )
-			{
-				data->insert(it,a);
-				calendar_size++;
-				break;
-			}
-			it++;
-		}
-		
-		// dosiel som nakoniec a nevlozil som, vlozim na koniec
-		if( it == data->end() )
-		{
-			data->insert(it,a);
-			calendar_size++;
-		}
-	}
-}
-
-
-
-Action* Calendar::GetFirst()
-{
-	return data->front();
-}
-
-void Calendar::delete_first()
-{
-	delete *data->begin();
-	data->pop_front(); 
-	calendar_size--;
-}
-
-
-Calendar::~Calendar()
-{ 
-	for(auto it: *data )
-	{
-		delete it;
-	}
-
-	delete data;
-	std::cerr << "Warning: Calendar destroyed.\n";
-}
-
-
-
-void Calendar::destroy_instance()
-{
-	delete instance_; 
-	instance_ = nullptr; 
-}
-
-
-/****************************************
- * Simulator
- ****************************************/
- 
-
- void Run()
-{
-#ifdef DEBUG
-	Calendar::instance()->dumpCalendar();
-	std::cout << std::endl << "====== RUN ======" << std::endl;
-#endif	
-	
-	while( !Calendar::instance()->empty() )
-	{
-		Action* event = Calendar::instance()->GetFirst();
-		Internal::Time = event->time_start();
-		std::cout << "Current simulation time: " << Internal::Time << " ";
-		event->Behavior();
-		Calendar::instance()->delete_first();
-	}
-	
-#ifdef DEBUG	
-	std::cout << std::endl;
-#endif	
-
-	Calendar::instance()->destroy_instance();
-} 
- 
- 
- 
- 
- 
- 
- 
- 
