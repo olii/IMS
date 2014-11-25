@@ -4,6 +4,9 @@
 #include <cfloat>
 #include <iostream>
 #include <cstdlib>
+#include <stdexcept>
+	
+
 
 #include "core.h"
 
@@ -29,6 +32,18 @@ MetaEntity::Fptr MetaEntity::Passivate()
     return Calendar::instance().Passivate(this);
 }
 
+MetaEntity::Fptr Calendar::Passivate(MetaEntity *entity)
+{
+    for( auto it = calendar.begin(); it != calendar.end(); it++ ) {
+        if ( it->GetTargetPtr() == entity )
+        {
+            MetaEntity::Fptr tmp = it->GetPtr();
+            calendar.erase(it);
+            return tmp;
+        }
+    }
+    return nullptr;
+}
 
 void Calendar::Dump()
 {
@@ -53,18 +68,7 @@ void Calendar::Dump()
         cout << "Events are sorted: FAIL" << endl;
 }
 
-MetaEntity::Fptr Calendar::Passivate(MetaEntity *entity)
-{
-    for( auto it = calendar.begin(); it != calendar.end(); it++ ) {
-        if ( it->GetTargetPtr() == entity )
-        {
-            MetaEntity::Fptr tmp = it->GetPtr();
-            calendar.erase(it);
-            return tmp;
-        }
-    }
-    return nullptr;
-}
+
 
 void Calendar::Schedule(MetaEntity &t, MetaEntity::Fptr ptr, double time, uint8_t priority)
 {
@@ -153,6 +157,7 @@ bool Queue::isPresent(MetaEntity &obj)
     }
     return false;
 }
+
 
 void Queue::Dump()
 {
@@ -290,6 +295,8 @@ void Store::Leave(int capacity)
     // didnt find anyone with required capacity < freeCapacity
 }
 
+
+/** Functions for generating random numbers **/
 std::mt19937& _random()
 {
 	static std::random_device rd;
@@ -312,12 +319,75 @@ double Exponential(double middle)
 double Uniform(double low, double high)
 {
 	if( low >= high )
-	{
-		std::cerr << __FUNCTION__ << "Range error" << std::endl;
-		abort();
-	}
+		throw std::domain_error("Uniform: Range error");
+
 	std::uniform_real_distribution<double> dis(low, high);
 	return dis(_random());
 }
+
+
+
+
+/** Statistics **/
+Statistics::Statistics( std::string name_): 
+numRecords(0), min(0), max(0),  sum(0) 
+{
+    name = name_;
+}
+
+
+double Statistics::Min() const
+{
+    if( numRecords != 0)
+        return min;
+    else
+        throw std::logic_error("Statistics " + name + ": No records.");
+}
+
+
+double Statistics::Max() const
+{
+    if( numRecords != 0)
+        return max;
+    else
+        throw std::logic_error("Statistics " + name + ": No records.");
+}
+
+double Statistics::Avg() const
+{
+    if( numRecords != 0)
+        return sum/numRecords;
+    else
+        throw std::logic_error("Statistics " + name + ": No records.");
+}
+
+
+void Statistics::Output()
+{   
+    using namespace std;
+    cout << "+-------------+" << endl;
+    cout << name + " output (TODO)" << endl;
+    cout << "+-------------+" << endl;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

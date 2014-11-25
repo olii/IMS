@@ -252,6 +252,37 @@ private:
 };
 
 
+class Statistics
+{
+    
+    unsigned numRecords;
+    double min;
+    double max;
+    double sum;     
+    std::string name;
+    
+public:	
+    Statistics(std::string name_); 
+    double Min() const;
+    double Max() const;
+    double Avg() const;
+    void Clear() { numRecords = min = max = sum = 0; }
+    virtual void Output(); // will be reimplemented in facility, store and queue
+    
+    void operator()(double val) // stat recording
+    {
+        sum += val;
+        if(++numRecords == 1) 
+            min = max = val;
+        else 
+        {
+           if(val<min) min = val;
+           if(val>max) max = val;
+        }
+    }
+};
+
+
 
 void Run();
 double Time();
