@@ -79,8 +79,9 @@ class E : public Event
 };
 
 
-int main()
+int main(int argc, char* argv[])
 {
+/*
     std::vector<P*> ptrlist;
 
     int i = 0;
@@ -100,10 +101,17 @@ int main()
     InitTime(0, 20);
     Run();
 
-    /*for( auto it: ptrlist )
+    for( auto it: ptrlist )
     {
         delete it;
-    }*/
-
+    }
+*/
+	for(int i = 0; i < 100; i++ )
+	{
+		std::cout << Uniform(atoi(argv[1]), atoi(argv[2])) << " ";
+		if(i % 10 == 0)
+			std::cout << std::endl;
+	}
+	std::cout << std::endl;
     return 0;
 }
