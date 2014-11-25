@@ -1,10 +1,11 @@
-#include "core.h"
 #include <vector>
 #include <algorithm>
-#include <float.h>
+#include <random>
+#include <cfloat>
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 
+#include "core.h"
 
 namespace Internal {
     long double Time = 0; // simulation time
@@ -288,3 +289,35 @@ void Store::Leave(int capacity)
     }
     // didnt find anyone with required capacity < freeCapacity
 }
+
+std::mt19937& _random()
+{
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	return gen;
+}
+
+double Random()
+{
+	return Uniform(0,1);
+}
+
+double Exponential(double middle)
+{
+	std::exponential_distribution<double> distribution(1.0/middle);
+	return distribution(_random()); 
+}
+
+
+double Uniform(double low, double high)
+{
+	if( low >= high )
+	{
+		std::cerr << __FUNCTION__ << "Range error" << std::endl;
+		abort();
+	}
+	std::uniform_real_distribution<double> dis(low, high);
+	return dis(_random());
+}
+
+

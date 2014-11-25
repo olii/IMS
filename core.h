@@ -257,6 +257,11 @@ void Run();
 double Time();
 void InitTime(double start, double end);
 
+double Exponential(double middle);
+double Uniform(double low, double high);
+double Random();
+
+
 
 
 
