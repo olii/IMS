@@ -213,10 +213,12 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
         MetaEntity::Fptr nextcall = in.GetTarget().Passivate();
         in.setPtr(nextcall);
         Q2.Insert(in);
+        tStats(); // -- vypnem tstats pre aktualneho
 
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
+        tStats(); // -- zapnem tstats pre noveho
     }
     else
     {

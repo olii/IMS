@@ -62,6 +62,7 @@ public:
     double Max() const;
     double Avg() const;
     double NumRecords() { return numRecords; }
+    void SetNumRecords(unsigned int val) { numRecords = val; }
     void Clear() { numRecords = min = max = sum = 0; }
     virtual void Output(); // will be reimplemented in facility, store and queue 
     void Record(double val); // stat recording
