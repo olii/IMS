@@ -242,6 +242,7 @@ void Facility::Release(MetaEntity */*obj*/)
     if (!flag && !Q2.Empty())  // interrupt queue not empty
     {                           // seize from interrupt queue...
         in = Q2.GetFirst();// seize again
+        tStats();
         in.GetTarget().scheduleAt(Time() + in.remainingTime, in.GetPtr());
         //Q1.Dump();
         // Q2.Dump();
@@ -250,6 +251,7 @@ void Facility::Release(MetaEntity */*obj*/)
     }
     if (!Q1.Empty()) {         // input queue not empty -- seize from Q1
         in = Q1.GetFirst();// seize again
+        tStats();
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         //Q1.Dump();
         //Q2.Dump();
@@ -474,7 +476,7 @@ void TimeStats::operator()()
         if(time_of_service>max) max = time_of_service;
         
         
-        sum += Time() - start_time;
+        sum += (Time() - start_time);
         start_time = -1;
         busy = false;
     }
