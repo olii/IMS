@@ -120,6 +120,7 @@ void Run()
             delete &item.GetTarget();
         }
     }
+    Internal::Time =Internal::TimeStop;
     GarbageCollector::instance().Free();
     std::cout << std::endl;
 }
