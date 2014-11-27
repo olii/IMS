@@ -441,7 +441,7 @@ void GarbageCollector::Free(){
 TimeStats::TimeStats()
 {
     t_0 = sum = min = max = 0;
-    start_time = t_end -1;
+    start_time = t_end = -1;
     busy = false;
     name = std::string("TimeStat ") + std::to_string(++id);
     
@@ -458,8 +458,9 @@ TimeStats::TimeStats()
 
 void TimeStats::operator()()
 {
+   // std::cout << "Time() " << Time() << " start_time " << start_time << "t_end: " << t_end << std::endl; 
     if(t_end!=-1 && Time() > t_end)
-        return;
+      return;
 
     if(start_time == -1) // start of service
     {
