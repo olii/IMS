@@ -186,6 +186,8 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
     /* Simlib rewriten method */
     if ( !Busy() )
     {
+        stats.Record(1);
+        tStats();
         in = QueueItem(*obj, callback,service_prio );
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         return;
@@ -212,7 +214,8 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
 
 void Facility::Release(MetaEntity */*obj*/)
 {
-    /* Simlib rewriten method */
+    tStats();
+    /* Simlib rewritten method */
     in.resetPtr();
     bool flag = false;          // correction: 5.12.91, bool:1998/08/10
     if (!(Q1.Empty() || Q2.Empty())) {
@@ -242,17 +245,14 @@ void Facility::Release(MetaEntity */*obj*/)
 void Facility::Output()
 {
     using namespace std;
-    cout << "+---------------------------+" << endl;
-    cout << "FACILITY " << _name << endl;
-    cout << "+---------------------------+" << endl;
-    
-    cout << "Status: " << (tStats.Busy() ? "Busy" : "Free") << endl;
+    cout << "+---------------------------+" << endl
+         << "FACILITY " << _name << endl
+         << "+---------------------------+" << endl
+         << "Status: " << (tStats.Busy() ? "Busy" : "Free") << endl
+         << "Time interval: " << tStats.Start() << " - " << tStats.End() << endl
+         << "Number of requests: " << stats.NumRecords() << endl
+         << "Average utilization: " << tStats.Avg() << endl;
 
-    /*
-| Time interval = 0 - 100000 |
-| Number of requests = 9124 |
-|
-Average utilization = 0.89652 */
 }
 
 void Process::Seize(Facility &f, Fptr callback, uint8_t servicePrio)

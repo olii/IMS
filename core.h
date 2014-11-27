@@ -41,6 +41,7 @@ public:
     double Min() const;
     double Max() const;
     double Avg() const;
+    double NumRecords() { return numRecords; }
     void Clear() { numRecords = min = max = sum = 0; }
     virtual void Output(); // will be reimplemented in facility, store and queue 
     void Record(double val); // stat recording
@@ -70,6 +71,8 @@ public:
     double Avg() const;
     double Min() const {return min;}
     double Max() const {return max;}
+    double Start() { return t_0; }
+    double End() { return t_end; }
     
     void Init(double t0, double end) { t_0 = t0; t_end = end; }
     void operator()(); // stat recording
