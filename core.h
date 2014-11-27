@@ -9,6 +9,7 @@
 #include <string>
 #include <iostream>
 #include <queue>
+#include <unordered_set>
 
 using std::cout;
 
@@ -16,6 +17,25 @@ using std::cout;
 class Calendar;
 class Facility;
 class Store;
+class GarbageCollector;
+class MetaEntity;
+
+class GarbageCollector
+{
+public:
+    void  addPtr( MetaEntity *ptr ){ database.insert(ptr); }
+    void removePtr( MetaEntity *ptr ){ database.erase(ptr); }
+    static GarbageCollector& instance(){
+        static GarbageCollector instance; // Guaranteed to be destroyed.
+        return instance;
+    }
+    void Free();
+    bool flag = false;
+
+private:
+    std::unordered_set<MetaEntity*> database;
+    explicit GarbageCollector() {}
+};
 
 namespace Internal {
     extern long double Time; // simulation time
@@ -36,8 +56,10 @@ public:
     MetaEntity(uint8_t prio = 0) : _prioriy(prio) { // zaregistrovat do GC alebo nastavit priznak
         id = Internal::GenerateID();
         _name = std::string("MetaEntity_") + std::to_string(id);
+        GarbageCollector::instance().addPtr(this);
     }
-    virtual ~MetaEntity(){}
+
+    virtual ~MetaEntity(){ GarbageCollector::instance().removePtr(this); }
 
     #define SLOT(x) (static_cast<MetaEntity::Fptr>((&x)))
     virtual void Behavior() = 0;
@@ -48,6 +70,7 @@ public:
     double activationTime() {return _activationTime;}
     Fptr Passivate();
 
+    int referenceCounter = 0;
 };
 
 class Process : public MetaEntity
@@ -281,6 +304,8 @@ public:
         }
     }
 };
+
+
 
 
 

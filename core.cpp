@@ -23,7 +23,8 @@ namespace Internal {
 
 void MetaEntity::scheduleAt(double t, Fptr callback)
 {
-   Calendar::instance().Schedule(*this, callback, t, _prioriy); // TODO Priority
+   Calendar::instance().Schedule(*this, callback, t, _prioriy);
+   ++referenceCounter;
    _activationTime = t;
 }
 
@@ -38,6 +39,7 @@ MetaEntity::Fptr Calendar::Passivate(MetaEntity *entity)
         if ( it->GetTargetPtr() == entity )
         {
             MetaEntity::Fptr tmp = it->GetPtr();
+            it->GetTarget().referenceCounter += 1;
             calendar.erase(it);
             return tmp;
         }
@@ -102,11 +104,21 @@ void Run()
             std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
             return;
         }
+        //std::cout << "-------------------\n";
         //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
-        std::cout << "Current simulation time: " << std::fixed  << Internal::Time << " ";
+        //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
+        //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
+        item.GetTarget().referenceCounter--;
         item.Execute(); // event->Behavior();
-
+        //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
+        //std::cout << "-------------------\n";
+        if (item.GetTarget().referenceCounter == 0)
+        {
+            GarbageCollector::instance().removePtr(&item.GetTarget());
+            delete &item.GetTarget();
+        }
     }
+    GarbageCollector::instance().Free();
     std::cout << std::endl;
 }
 
@@ -187,6 +199,7 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
     if ( !Busy() )
     {
         in = QueueItem(*obj, callback,service_prio );
+        obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         return;
     }
@@ -198,12 +211,14 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
         Q2.Insert(in);
 
         in = QueueItem(*obj, callback,service_prio );
+        obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
     }
     else
     {
         Q1.Insert(QueueItem(*obj, callback,service_prio ));
         obj->Passivate();
+        obj->referenceCounter++;
     }
     //Q1.Dump();
     //Q2.Dump();
@@ -213,8 +228,9 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
 void Facility::Release(MetaEntity */*obj*/)
 {
     /* Simlib rewriten method */
+    in.GetTarget().referenceCounter--;
     in.resetPtr();
-    bool flag = false;          // correction: 5.12.91, bool:1998/08/10
+    bool flag = false;
     if (!(Q1.Empty() || Q2.Empty())) {
         flag = Q1.Front().GetPriority() > Q2.Front().GetPriority();
     }
@@ -270,6 +286,7 @@ void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
         QueueItem item = QueueItem(*obj, callback );
         item.requiredCapacity = _capacity;
         Q.Insert(item);
+        obj->referenceCounter += 1;
         obj->Passivate();
         return;
     }
@@ -289,6 +306,7 @@ void Store::Leave(int capacity)
           freeCounter -= it->requiredCapacity; // enter
           it->GetTarget().scheduleAt(Time(), it->GetPtr()); // activate
           queue.erase(it); // remove from queue
+          it->GetTarget().referenceCounter--;
           break;
       }
     }
@@ -372,22 +390,9 @@ void Statistics::Output()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void GarbageCollector::Free(){
+    for( auto it = database.begin(); it != database.end(); it++ ) {
+        delete *it;
+    }
+    database.clear();
+}

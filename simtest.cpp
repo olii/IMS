@@ -8,11 +8,7 @@ Store sklad("sklad");
 
 
 using namespace std;
-
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_real_distribution<double> dis(1, 2);
-
+/*
 class P : public Process
 {
 public:
@@ -35,7 +31,7 @@ public:
         Leave(sklad,1);
     }
 
-    /*void Behavior()
+    void Behavior()
     {
         cout << name() << endl;
         if ( id == 2 ) _prioriy = 3;
@@ -61,7 +57,7 @@ public:
         Release(linka);
         cout << name() << ": released" << endl;
         cout << name() << ": EXIT ...." << endl;
-    }*/
+    }
 };
 
 
@@ -76,42 +72,25 @@ class E : public Event
         (new P)->scheduleAt(Time());
         scheduleAt( Time() + 0.5);
     }
-};
+};*/
+
+
 
 
 int main(int argc, char* argv[])
 {
-/*
-    std::vector<P*> ptrlist;
-
     int i = 0;
     while(  i < 3 )
     {
-        double t = dis(gen);
+        double t = Exponential(2);
         P *ptr = new P;
-        ptrlist.push_back(ptr);
         ptr->scheduleAt( t );
         i++;
     }
 
-    //E *ptr = new E;
-    //ptr->scheduleAt(0);
-
-    Calendar::instance().Dump();
     InitTime(0, 20);
     Run();
 
-    for( auto it: ptrlist )
-    {
-        delete it;
-    }
-*/
-	for(int i = 0; i < 100; i++ )
-	{
-		std::cout << Uniform(atoi(argv[1]), atoi(argv[2])) << " ";
-		if(i % 10 == 0)
-			std::cout << std::endl;
-	}
-	std::cout << std::endl;
+
     return 0;
 }
