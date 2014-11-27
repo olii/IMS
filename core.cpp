@@ -239,6 +239,21 @@ void Facility::Release(MetaEntity */*obj*/)
     //Q2.Dump();
 }
 
+void Facility::Output()
+{
+    using namespace std;
+    cout << "+---------------------------+" << endl;
+    cout << "FACILITY " << _name << endl;
+    cout << "+---------------------------+" << endl;
+    
+    cout << "Status: " << (tStats.Busy() ? "Busy" : "Free") << endl;
+
+    /*
+| Time interval = 0 - 100000 |
+| Number of requests = 9124 |
+|
+Average utilization = 0.89652 */
+}
 
 void Process::Seize(Facility &f, Fptr callback, uint8_t servicePrio)
 {
@@ -330,9 +345,15 @@ double Uniform(double low, double high)
 
 /** Statistics **/
 Statistics::Statistics( std::string name_): 
-numRecords(0), min(0), max(0),  sum(0) 
+numRecords(0), min(0), max(0),  sum(0)
 {
     name = name_;
+}
+
+Statistics::Statistics(): 
+numRecords(0), min(0), max(0),  sum(0)
+{
+    name = std::string("Stat ") + std::to_string(++id);
 }
 
 
@@ -371,11 +392,71 @@ void Statistics::Output()
 }
 
 
+void Statistics::Record(double val)
+{
+    sum += val;
+    if(++numRecords == 1) 
+        min = max = val;
+    else 
+    {
+       if(val<min) 
+          min = val;
+       if(val>max) 
+          max = val;
+    }
+}
 
 
+/** TimeStats **/
+TimeStats::TimeStats()
+{
+    t_0 = sum = min = max = 0;
+    start_time = t_end -1;
+    busy = false;
+    name = std::string("TimeStat ") + std::to_string(++id);
+    
+}
 
 
+ TimeStats::TimeStats(std::string name_) :
+  t_0(0), t_end(-1), sum(0), 
+  start_time(-1), busy(false),
+  min(0), max(0)
+ {
+    name = name_;
+ }
 
+void TimeStats::operator()()
+{
+    if(t_end!=-1 && Time() > t_end)
+        return;
+
+    if(start_time == -1) // start of service
+    {
+        start_time = Time();
+        busy = true;
+    }
+    else // end of service
+    {
+        double time_of_service = Time() - start_time;
+        if(time_of_service<min) min = time_of_service;
+        if(time_of_service>max) max = time_of_service;
+        
+        
+        sum += Time() - start_time;
+        start_time = -1;
+        busy = false;
+    }
+}
+
+double TimeStats::Avg() const
+{
+    if(start_time == -1) // noone in service
+         return sum/Time();
+         
+    else // somebody in service
+        return (sum + Time() - start_time) / Time();
+}
 
 
 
