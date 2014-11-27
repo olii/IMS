@@ -280,8 +280,6 @@ public:
 
 class Facility
 {
-    Statistics stats;
-    TimeStats tStats;
 public :
     Facility (std::string name) {
         _name = name; id = Internal::GenerateID();
@@ -294,14 +292,17 @@ public :
     void Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service_prio = 0 );
     void Release( MetaEntity *obj );
 
-    QueueItem in;
     void Output();
+
+    QueueItem in;
 
 private:
     int id;
     std::string _name;
     Queue Q1;
     Queue Q2;
+    Statistics stats;
+    TimeStats tStats;
 };
 
 

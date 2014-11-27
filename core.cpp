@@ -99,13 +99,13 @@ void Run()
     {
         //Calendar::instance().Dump();
         CalendarItem item = Calendar::instance().Next();
-        Internal::Time = item.GetTime();
-        if ( Internal::Time > Internal::TimeStop )
+        if ( item.GetTime() > Internal::TimeStop )
         {
             Calendar::instance().Clear();
             std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
             break;
         }
+        Internal::Time = item.GetTime();
         //std::cout << "-------------------\n";
         //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
         //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
@@ -198,9 +198,9 @@ std::list<QueueItem> &Queue::QueueRawAccess()
 void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service_prio)
 {
     /* Simlib rewriten method */
+    stats.Record(1);
     if ( !Busy() )
     {
-        stats.Record(1);
         tStats();
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++;

@@ -7,6 +7,7 @@ Facility Linka("linka");
 Store sklad("sklad");
 
 int bezCekani = 0;
+int ob = 0;
 
 using namespace std;
 /*
@@ -85,8 +86,10 @@ class Transakce : public Process
     }
     void Behavior2()
     {
+        ob++;
         double obsluha;
         obsluha = Exponential(10);
+        cout << "doba obsluhy " << obsluha << endl;
         scheduleAt(Time() + obsluha, SLOT(Transakce::Behavior3) );
     }
     void Behavior3()
@@ -118,6 +121,7 @@ int main(int argc, char* argv[])
     dobaVSystemu.Output();
 */
     std::cout << "Bez cekani: " << bezCekani << std::endl;
+    cout << "ob " << ob << endl;
     Linka.Output();
 
 
