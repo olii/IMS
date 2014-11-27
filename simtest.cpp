@@ -87,7 +87,7 @@ class Transakce : public Process
     {
         double obsluha;
         obsluha = Exponential(10);
-        scheduleAt(obsluha, SLOT(Transakce::Behavior3) );
+        scheduleAt(Time() + obsluha, SLOT(Transakce::Behavior3) );
     }
     void Behavior3()
     {
