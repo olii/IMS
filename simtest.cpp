@@ -3,9 +3,10 @@
 #include <random>
 
 
-Facility linka("linka");
+Facility Linka("linka");
 Store sklad("sklad");
 
+int bezCekani = 0;
 
 using namespace std;
 /*
@@ -74,22 +75,50 @@ class E : public Event
     }
 };*/
 
+class Transakce : public Process
+{
+    void Behavior()
+    {
+        if (!Linka.Busy()) bezCekani++;
+        Seize(Linka, SLOT(Transakce::Behavior2));
+        //dobaVSystemu(Time - tvstup);
+    }
+    void Behavior2()
+    {
+        double obsluha;
+        obsluha = Exponential(10);
+        scheduleAt(obsluha, SLOT(Transakce::Behavior3) );
+    }
+    void Behavior3()
+    {
+        //dobaObsluhy(obsluha);
+        Release(Linka);
+        //dobaVSystemu(Time - tvstup);
+    }
+};
+
+class Generator : public Event {
+    void Behavior() {
+        (new Transakce)->scheduleAt(Time());
+        scheduleAt(Time() + Exponential(11));
+    }
+};
+
+
 
 
 
 int main(int argc, char* argv[])
 {
-    int i = 0;
-    while(  i < 3 )
-    {
-        double t = Exponential(2);
-        P *ptr = new P;
-        ptr->scheduleAt( t );
-        i++;
-    }
-
-    InitTime(0, 20);
+    InitTime(0, 100000);
+    (new Generator)->scheduleAt(0);
     Run();
+/*
+    dobaObsluhy.Output();
+    dobaVSystemu.Output();
+*/
+    std::cout << "Bez cekani: " << bezCekani << std::endl;
+    Linka.Output();
 
 
     return 0;

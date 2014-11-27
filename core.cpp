@@ -20,6 +20,8 @@ namespace Internal {
         return s_nID++;
     }
 }
+unsigned int Statistics::id = 0;
+unsigned int TimeStats::id = 0;
 
 void MetaEntity::scheduleAt(double t, Fptr callback)
 {
@@ -102,7 +104,7 @@ void Run()
         {
             Calendar::instance().Clear();
             std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
-            return;
+            break;
         }
         //std::cout << "-------------------\n";
         //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
@@ -198,6 +200,8 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
     /* Simlib rewriten method */
     if ( !Busy() )
     {
+        stats.Record(1);
+        tStats();
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
@@ -228,6 +232,7 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
 void Facility::Release(MetaEntity */*obj*/)
 {
     /* Simlib rewriten method */
+    tStats();
     in.GetTarget().referenceCounter--;
     in.resetPtr();
     bool flag = false;
@@ -255,6 +260,18 @@ void Facility::Release(MetaEntity */*obj*/)
     //Q2.Dump();
 }
 
+void Facility::Output()
+{
+    using namespace std;
+    cout << "+---------------------------+" << endl
+         << "FACILITY " << _name << endl
+         << "+---------------------------+" << endl
+         << "Status: " << (tStats.Busy() ? "Busy" : "Free") << endl
+         << "Time interval: " << tStats.Start() << " - " << tStats.End() << endl
+         << "Number of requests: " << stats.NumRecords() << endl
+         << "Average utilization: " << tStats.Avg() << endl;
+
+}
 
 void Process::Seize(Facility &f, Fptr callback, uint8_t servicePrio)
 {
@@ -348,9 +365,15 @@ double Uniform(double low, double high)
 
 /** Statistics **/
 Statistics::Statistics( std::string name_): 
-numRecords(0), min(0), max(0),  sum(0) 
+numRecords(0), min(0), max(0),  sum(0)
 {
     name = name_;
+}
+
+Statistics::Statistics(): 
+numRecords(0), min(0), max(0),  sum(0)
+{
+    name = std::string("Stat ") + std::to_string(++id);
 }
 
 
@@ -389,10 +412,78 @@ void Statistics::Output()
 }
 
 
+void Statistics::Record(double val)
+{
+    sum += val;
+    if(++numRecords == 1) 
+        min = max = val;
+    else 
+    {
+       if(val<min) 
+          min = val;
+       if(val>max) 
+          max = val;
+    }
+}
 
 void GarbageCollector::Free(){
+    //std::cout << "GarbageCollector Free()\n";
+    //std::cout << "database count " << database.size() << "\n";
     for( auto it = database.begin(); it != database.end(); it++ ) {
+        //std :: cout << "Deleting object" << (*it)->name() << "\n";
         delete *it;
     }
+
     database.clear();
+}
+
+/** TimeStats **/
+TimeStats::TimeStats()
+{
+    t_0 = sum = min = max = 0;
+    start_time = t_end -1;
+    busy = false;
+    name = std::string("TimeStat ") + std::to_string(++id);
+    
+}
+
+
+ TimeStats::TimeStats(std::string name_) :
+  t_0(0), t_end(-1), sum(0), 
+  start_time(-1), busy(false),
+  min(0), max(0)
+ {
+    name = name_;
+ }
+
+void TimeStats::operator()()
+{
+    if(t_end!=-1 && Time() > t_end)
+        return;
+
+    if(start_time == -1) // start of service
+    {
+        start_time = Time();
+        busy = true;
+    }
+    else // end of service
+    {
+        double time_of_service = Time() - start_time;
+        if(time_of_service<min) min = time_of_service;
+        if(time_of_service>max) max = time_of_service;
+        
+        
+        sum += Time() - start_time;
+        start_time = -1;
+        busy = false;
+    }
+}
+
+double TimeStats::Avg() const
+{
+    if(start_time == -1) // noone in service
+         return sum/Time();
+         
+    else // somebody in service
+        return (sum + Time() - start_time) / Time();
 }

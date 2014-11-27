@@ -37,11 +37,66 @@ private:
     explicit GarbageCollector() {}
 };
 
+
 namespace Internal {
     extern long double Time; // simulation time
     extern long double TimeStop;
     int GenerateID();
+
 }
+
+
+class Statistics
+{
+    unsigned numRecords;
+    double min;
+    double max;
+    double sum;     
+    std::string name;
+    static unsigned int id;
+    
+public:	
+    Statistics();
+    Statistics(std::string name_); 
+    double Min() const;
+    double Max() const;
+    double Avg() const;
+    double NumRecords() { return numRecords; }
+    void Clear() { numRecords = min = max = sum = 0; }
+    virtual void Output(); // will be reimplemented in facility, store and queue 
+    void Record(double val); // stat recording
+};
+
+    
+
+
+class TimeStats
+{
+    double t_0; // start of statistics
+    double t_end; // end of statistics
+    double sum; // total time of service
+    double start_time; // start of service
+    std::string name;
+    static unsigned int id;
+    bool busy;
+    double min, max;
+    // TODO rozptyl
+    
+    
+public:
+    TimeStats();
+    TimeStats(std::string name_);
+    bool Busy() { return busy; }
+    double Avg() const;
+    double Min() const {return min;}
+    double Max() const {return max;}
+    double Start() { return t_0; }
+    double End() { return t_end; }
+    
+    void Init(double t0, double end) { t_0 = t0; t_end = end; }
+    void operator()(); // stat recording
+  
+};
 
 class MetaEntity
 {
@@ -59,7 +114,7 @@ public:
         GarbageCollector::instance().addPtr(this);
     }
 
-    virtual ~MetaEntity(){ GarbageCollector::instance().removePtr(this); }
+    virtual ~MetaEntity(){ }
 
     #define SLOT(x) (static_cast<MetaEntity::Fptr>((&x)))
     virtual void Behavior() = 0;
@@ -225,6 +280,8 @@ public:
 
 class Facility
 {
+    Statistics stats;
+    TimeStats tStats;
 public :
     Facility (std::string name) {
         _name = name; id = Internal::GenerateID();
@@ -238,6 +295,7 @@ public :
     void Release( MetaEntity *obj );
 
     QueueItem in;
+    void Output();
 
 private:
     int id;
@@ -274,36 +332,6 @@ private:
     Queue Q;
 };
 
-
-class Statistics
-{
-    
-    unsigned numRecords;
-    double min;
-    double max;
-    double sum;     
-    std::string name;
-    
-public:	
-    Statistics(std::string name_); 
-    double Min() const;
-    double Max() const;
-    double Avg() const;
-    void Clear() { numRecords = min = max = sum = 0; }
-    virtual void Output(); // will be reimplemented in facility, store and queue
-    
-    void operator()(double val) // stat recording
-    {
-        sum += val;
-        if(++numRecords == 1) 
-            min = max = val;
-        else 
-        {
-           if(val<min) min = val;
-           if(val>max) max = val;
-        }
-    }
-};
 
 
 
