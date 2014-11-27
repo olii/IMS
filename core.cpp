@@ -267,7 +267,7 @@ void Facility::Output()
          << "FACILITY " << _name << endl
          << "+---------------------------+" << endl
          << "Status: " << (tStats.Busy() ? "Busy" : "Free") << endl
-         << "Time interval: " << tStats.Start() << " - " << tStats.End() << endl
+         << "Time interval: " << tStats.Start() << " - " << (tStats.End() == -1 ? Time() : tStats.End())  << endl
          << "Number of requests: " << stats.NumRecords() << endl
          << "Average utilization: " << tStats.Avg() << endl;
 
