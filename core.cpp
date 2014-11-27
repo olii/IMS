@@ -270,7 +270,7 @@ void Facility::Output()
     cout << "+---------------------------+" << endl
          << "FACILITY " << _name << endl
          << "+---------------------------+" << endl
-         << "Status: " << (Busy() ? "Busy" : "Free") << endl
+         << "Status: " << (Busy() ? "Busy" : "not BUSY") << endl
          << "Time interval: " << tStats.Start() << " - " << (tStats.End() == -1 ? Time() : tStats.End())  << endl
          << "Number of requests: " << stats.NumRecords() << endl
          << "Average utilization: " << tStats.Avg() << endl;
