@@ -1,10 +1,10 @@
 CFLAGS = -g3 -Wall -std=c++11
-CC=g++
+CC=g++-4.9
 
 all : simtest
 
 simtest: core.o simtest.o
-        g++ -Wall -g3 -std=c++11 core.o simtest.o -o simtest
+		$(CC) $(CFLAGS) -Wl,-rpath,/usr/local/lib64 core.o simtest.o -o simtest
 	
 
 core.o: core.cpp core.h

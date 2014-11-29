@@ -182,18 +182,21 @@ void Queue::Insert(QueueItem item)
 
     item.GetTarget().referenceCounter++;
     item.insertTime = Time();
+    bool inserted = false;
     for( auto it = queue.begin(); it != queue.end(); it++ ) {
       if ( *it <= item ) {
           continue;
       } else {
           queue.insert(it, item);
-          return;
+          inserted = true;
+          break;
       }
     }
-    queue.push_back(item);
+    if (!inserted)
+        queue.push_back(item);
 
     /* STAT */
-    if ( maxLen < static_cast<unsigned int>(Length()) ) maxLen = Length();
+    if ( maxLen < queue.size() ) maxLen = Length();
     Previous_Time = Time();
 }
 
@@ -309,6 +312,10 @@ Print("+----------------------------------------------------------+\n");
         std::stringstream ss;
         ss << " Time interval = " << Start_Time << " - " << Time();
         std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
+        std::cout << "|  Incoming  " << std::setw(26) << incoming <<  "                    |" << std::endl;
+        std::cout << "|  Outcoming  " << std::setw(26) << outcoming << "                   |" << std::endl;
+        std::cout << "|  Current length = " << std::setw(26) << Length()  << "             |" << std::endl;
+        std::cout << "|  Maximal length = " << std::setw(26) << maxLen  << "             |" << std::endl;
     }
 }
 
