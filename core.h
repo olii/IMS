@@ -23,7 +23,7 @@ void InitTime(double start, double end);
 double Exponential(double middle);
 double Uniform(double low, double high);
 double Random();
-double Normal(double middle, double sigma)
+double Normal(double middle, double sigma);
 
 
 class Calendar;
