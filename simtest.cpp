@@ -89,7 +89,7 @@ class Transakce : public Process
         ob++;
         double obsluha;
         obsluha = Exponential(10);
-        cout << "doba obsluhy " << obsluha << endl;
+        //cout << "doba obsluhy " << obsluha << endl;
         scheduleAt(Time() + obsluha, SLOT(Transakce::Behavior3) );
     }
     void Behavior3()

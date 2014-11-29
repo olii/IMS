@@ -10,8 +10,19 @@
 #include <iostream>
 #include <queue>
 #include <unordered_set>
+#include <exception>
+#include <cfloat>
 
 using std::cout;
+
+
+void Run();
+double Time();
+void InitTime(double start, double end);
+
+double Exponential(double middle);
+double Uniform(double low, double high);
+double Random();
 
 
 class Calendar;
@@ -244,6 +255,7 @@ public:
 
     double remainingTime = 0; // Q2 in facility
     int requiredCapacity = 0; // Q in store
+    double insertTime = 0;
 
     bool operator<=( QueueItem& item2)
     {
@@ -264,30 +276,55 @@ class Queue
 {
 private:
     std::list<QueueItem> queue;
+    std::string _name;
+    /* TODO staticticky objekt */
+    unsigned int incoming = 0;
+    unsigned int outcoming = 0;
+    unsigned int maxLen = 0;
+    unsigned int sumLen = 0;   // calculate the average queue length
+    double minTime = DBL_MAX;
+    double maxTime = 0;    // max time of wait in Q
+    double Start_Time = 0; // time of first record
+    double Previous_Time = 0;
 public:
-    Queue(){ queue.clear(); }
+    Queue(){
+        _name = "Queue_" + std::to_string(Internal::GenerateID());
+        Start_Time = Time();
+        Previous_Time = Start_Time;
+    }
+    Queue(std::string name): _name(name){
+        Start_Time = Time();
+        Previous_Time = Start_Time;
+    }
     bool Empty() {return queue.empty(); }
     void Clear() { queue.clear(); }
     int Length() { return queue.size(); }
-
+    std::string name() {return _name;}
     void Insert(QueueItem item);
     QueueItem GetFirst();
     QueueItem& Front();
     bool isPresent( MetaEntity &obj );
     void Dump();
     std::list<QueueItem>& QueueRawAccess();
+    void Output();
+
 };
 
 
 class Facility
 {
 public :
-    Facility (std::string name) {
-        _name = name; id = Internal::GenerateID();
-    }
-    Facility () {
-        id = Internal::GenerateID(); _name = "Facility_" + std::to_string(id);
-    }
+    Facility (std::string name):
+        _name (name),
+        Q1(_name + ".Q1"),
+        Q2(_name + ".Q2")
+    {}
+    Facility ():
+        id (Internal::GenerateID()),
+        _name ("Facility_" + std::to_string(id)),
+        Q1(_name + ".Q1"),
+        Q2(_name + ".Q2")
+    {}
     bool Busy() { return (in.GetTargetPtr() == nullptr )?false:true; }
     int QueueLen() { return Q1.Length(); }
     void Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service_prio = 0 );
@@ -322,6 +359,7 @@ public:
     int Capacity(){ return capacity; }
     bool Full() {  return ( freeCounter == 0 ); }
     bool Empty(){ return capacity == freeCounter; }
+    std::string name(){return _name;}
     int QueueLen() { return Q.Length(); }
     void Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity );
     void Leave( int capacity );
@@ -333,19 +371,6 @@ private:
     int freeCounter;
     Queue Q;
 };
-
-
-
-
-
-
-void Run();
-double Time();
-void InitTime(double start, double end);
-
-double Exponential(double middle);
-double Uniform(double low, double high);
-double Random();
 
 
 

@@ -3,8 +3,10 @@
 #include <random>
 #include <cfloat>
 #include <iostream>
+#include <sstream>
 #include <cstdlib>
 #include <stdexcept>
+#include <iomanip>
 	
 
 
@@ -41,7 +43,7 @@ MetaEntity::Fptr Calendar::Passivate(MetaEntity *entity)
         if ( it->GetTargetPtr() == entity )
         {
             MetaEntity::Fptr tmp = it->GetPtr();
-            it->GetTarget().referenceCounter += 1;
+            it->GetTarget().referenceCounter -= 1;
             calendar.erase(it);
             return tmp;
         }
@@ -76,6 +78,12 @@ void Calendar::Dump()
 
 void Calendar::Schedule(MetaEntity &t, MetaEntity::Fptr ptr, double time, uint8_t priority)
 {
+    if (time < Time())
+    {
+        throw std::runtime_error (std::string("Schedule time < Time()."));
+        return;
+    }
+    Passivate(&t);
     CalendarItem item(t, ptr, time, priority);
 
     for( auto it = calendar.begin(); it != calendar.end(); it++ ) {
@@ -95,30 +103,37 @@ void Run()
 {
     std::cout << std::endl << "====== RUN ======" << std::endl;
     cout.precision(6);
-    while( !Calendar::instance().Empty() )
+    try
     {
-        //Calendar::instance().Dump();
-        CalendarItem item = Calendar::instance().Next();
-        if ( item.GetTime() > Internal::TimeStop )
+        while( !Calendar::instance().Empty() )
         {
-            Calendar::instance().Clear();
-            std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
-            break;
+            //Calendar::instance().Dump();
+            CalendarItem item = Calendar::instance().Next();
+            if ( item.GetTime() > Internal::TimeStop )
+            {
+                Calendar::instance().Clear();
+                std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
+                break;
+            }
+            Internal::Time = item.GetTime();
+            //std::cout << "-------------------\n";
+            //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
+            //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
+            //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
+            item.GetTarget().referenceCounter--;
+            item.Execute(); // event->Behavior();
+            //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
+            //std::cout << "-------------------\n";
+            if (item.GetTarget().referenceCounter == 0)
+            {
+                GarbageCollector::instance().removePtr(&item.GetTarget());
+                delete &item.GetTarget();
+            }
         }
-        Internal::Time = item.GetTime();
-        //std::cout << "-------------------\n";
-        //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
-        //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
-        //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
-        item.GetTarget().referenceCounter--;
-        item.Execute(); // event->Behavior();
-        //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
-        //std::cout << "-------------------\n";
-        if (item.GetTarget().referenceCounter == 0)
-        {
-            GarbageCollector::instance().removePtr(&item.GetTarget());
-            delete &item.GetTarget();
-        }
+        Internal::Time =Internal::TimeStop;
+    } catch (std::exception e) {
+        std::cerr << e.what() << std::endl;
+        abort();
     }
     Internal::Time =Internal::TimeStop;
     GarbageCollector::instance().Free();
@@ -137,30 +152,78 @@ void InitTime(double start, double end)
     Internal::TimeStop = end;
 }
 
+/*
+    unsigned int incoming = 0;
+    unsigned int outcoming = 0;
 
+    unsigned int maxLen = 0;
+    unsigned int sumLen = 0;   // calculate the average queue length
+
+    double minTime = 0;
+    double maxTime = 0;    // max time of wait in Q
+
+    double Start_Time = 0; // time of first record
+    double Previous_Time = -1;
+    */
 void Queue::Insert(QueueItem item)
 {
+    if (isPresent(item.GetTarget()))
+    {
+        throw std::runtime_error (std::string("Entity " + item.GetTarget().name() + " is already in " + _name + "."));
+        return;
+    }
+
+    /* STAT */
+    double diff = Time() - Previous_Time;
+    sumLen += ( diff * Length() );
+
+    incoming++;
+
+
+    item.GetTarget().referenceCounter++;
+    item.insertTime = Time();
     for( auto it = queue.begin(); it != queue.end(); it++ ) {
       if ( *it <= item ) {
           continue;
-      }
-      else {
+      } else {
           queue.insert(it, item);
           return;
       }
     }
     queue.push_back(item);
+
+    /* STAT */
+    if ( maxLen < static_cast<unsigned int>(Length()) ) maxLen = Length();
+    Previous_Time = Time();
 }
 
 QueueItem Queue::GetFirst()
 {
+    if (Empty())
+        throw std::runtime_error( name() + " is already empty.");
+
+    /* STAT */
+    double diff = Time() - Previous_Time;
+    sumLen += ( diff * Length() );
+    outcoming++;
+
     QueueItem tmp = queue.front();
+    tmp.GetTarget().referenceCounter--;
     queue.pop_front();
+
+    /* STAT */
+    Previous_Time = Time();
+    double WaitTime = Time() - tmp.insertTime;
+    if (WaitTime < minTime) minTime = WaitTime;
+    if (WaitTime > maxTime) maxTime = WaitTime;
+
     return tmp;
 }
 
 QueueItem &Queue::Front()
 {
+    if (Empty())
+        throw std::runtime_error( name() + " is already empty.");
     return queue.front();
 }
 
@@ -195,16 +258,70 @@ std::list<QueueItem> &Queue::QueueRawAccess()
     return queue;
 }
 
+void Queue::Output()
+{
+    /*
+    unsigned int incoming = 0;
+    unsigned int outcoming = 0;
+    unsigned int maxLen = 0;
+    unsigned int sumLen = 0;   // calculate the average queue length
+    double minTime = DBL_MAX;
+    double maxTime = 0;    // max time of wait in Q
+    double Start_Time = 0; // time of first record
+    double Previous_Time = 0;
+
+Print("+----------------------------------------------------------+\n");
+  122   Print("| QUEUE %-39s %10s |\n", Name(), StatN.Number()?"":"not used");
+  123   if (StatN.Number() > 0)
+  124   {
+  125     Print("+----------------------------------------------------------+\n");
+  126     sprintf(s," Time interval = %g - %g ",StatN.StartTime(), (double)Time);
+  127     Print(  "| %-56s |\n", s);
+  128     Print(  "|  Incoming  %-26ld                    |\n", StatN.Number());
+  129     Print(  "|  Outcoming  %-26ld                   |\n", StatDT.Number());
+  130     Print(  "|  Current length = %-26lu             |\n", size());
+  131     Print(  "|  Maximal length = %-25g              |\n", StatN.Max());
+  132     double dt = double(Time) - StatN.StartTime();
+  133     if(dt>0)
+  134     {
+  135       double mv = StatN.MeanValue();
+  136       Print(  "|  Average length = %-25g              |\n",mv);
+  137     }
+  138     if (StatDT.Number()>0)
+  139     {
+  140       Print(  "|  Minimal time = %-25g                |\n", StatDT.Min());
+  141       Print(  "|  Maximal time = %-25g                |\n", StatDT.Max());
+  142       double mv = StatDT.MeanValue();
+  143       Print(  "|  Average time = %-25g                |\n", mv);
+  144       if (StatDT.Number()>99)
+  145         Print("|  Standard deviation = %-25g          |\n",
+  146                StatDT.StdDev());
+  147     }
+  148   }
+  149   Print("+----------------------------------------------------------+\n");
+    */
+
+    std::cout << "+----------------------------------------------------------+" << std::endl;
+    std::cout << "| " << std::left << std::setw(45) << name() << " "
+              << std::setw(10) << (incoming?"":"not used") << " |" << std::endl;
+    if (incoming){
+        std::cout << "+----------------------------------------------------------+" << std::endl;
+        std::stringstream ss;
+        ss << " Time interval = " << Start_Time << " - " << Time();
+        std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
+    }
+}
+
 
 void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service_prio)
 {
     /* Simlib rewriten method */
-    stats.Record(1);
     if ( !Busy() )
     {
         tStats();
+        stats.Record(1);
         in = QueueItem(*obj, callback,service_prio );
-        obj->referenceCounter++;
+        obj->referenceCounter++; // explicit increment
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         return;
     }
@@ -213,19 +330,20 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
         in.remainingTime = in.GetTarget().activationTime() - Time();
         MetaEntity::Fptr nextcall = in.GetTarget().Passivate();
         in.setPtr(nextcall);
-        Q2.Insert(in);
+        in.GetTarget().referenceCounter--; // explicit decrement
+        Q2.Insert(in); // -- automaticky zvysi ref.  pocitadlo
         tStats(); // -- vypnem tstats pre aktualneho
 
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         tStats(); // -- zapnem tstats pre noveho
+        stats.Record(1);
     }
     else
     {
         Q1.Insert(QueueItem(*obj, callback,service_prio ));
         obj->Passivate();
-        obj->referenceCounter++;
     }
     //Q1.Dump();
     //Q2.Dump();
@@ -246,6 +364,7 @@ void Facility::Release(MetaEntity */*obj*/)
     {                           // seize from interrupt queue...
         in = Q2.GetFirst();// seize again
         tStats();
+        in.GetTarget().referenceCounter++;
         in.GetTarget().scheduleAt(Time() + in.remainingTime, in.GetPtr());
         //Q1.Dump();
         // Q2.Dump();
@@ -254,7 +373,9 @@ void Facility::Release(MetaEntity */*obj*/)
     }
     if (!Q1.Empty()) {         // input queue not empty -- seize from Q1
         in = Q1.GetFirst();// seize again
+        in.GetTarget().referenceCounter++;
         tStats();
+        stats.Record(1);
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         //Q1.Dump();
         //Q2.Dump();
@@ -274,7 +395,9 @@ void Facility::Output()
          << "Status: " << (Busy() ? "Busy" : "not BUSY") << endl
          << "Time interval: " << tStats.Start() << " - " << (tStats.End() == -1 ? Time() : tStats.End())  << endl
          << "Number of requests: " << stats.NumRecords() << endl
-         << "Average utilization: " << tStats.Avg() << endl;
+         << "Average utilization: " << tStats.Avg() << endl
+         << "+---------------------------+" << endl;
+    Q1.Output();
 
 }
 
@@ -303,12 +426,14 @@ void Process::Leave(Store &s, int capacity)
 void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
 {
     //if ( _capacity > capacity ) abort();
+    if ( _capacity > capacity )
+        throw std::runtime_error( name() + " has maximal capacity " +std::to_string(capacity) +
+                                  "but entered with " + std::to_string(_capacity) );
     if ( Free() < capacity )
     {
         QueueItem item = QueueItem(*obj, callback );
         item.requiredCapacity = _capacity;
         Q.Insert(item);
-        obj->referenceCounter += 1;
         obj->Passivate();
         return;
     }
