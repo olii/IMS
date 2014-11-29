@@ -497,6 +497,12 @@ double Uniform(double low, double high)
 	return dis(_random());
 }
 
+double Normal(double middle, double sigma)
+{
+    std::normal_distribution<double> distribution(middle,sigma);
+    return distribution(_random());
+}
+
 
 
 
