@@ -119,6 +119,7 @@ void Run()
             //std::cout << "-------------------\n";
             //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
             //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
+            //std::cout << "EVENT: " << item.GetTarget().name() <<  "\n";
             //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
             item.GetTarget().referenceCounter--;
             item.Execute(); // event->Behavior();
@@ -192,31 +193,46 @@ void Queue::Insert(QueueItem item)
           break;
       }
     }
-    if (!inserted)
+    if (inserted == false)
+    {
         queue.push_back(item);
+    }
 
     /* STAT */
     if ( maxLen < queue.size() ) maxLen = Length();
     Previous_Time = Time();
 }
 
-QueueItem Queue::GetFirst()
+QueueItem Queue::GetFirst(int capacity)
 {
     if (Empty())
         throw std::runtime_error( name() + " is already empty.");
+
+    std::list<QueueItem>::iterator it;
+    for( it = queue.begin(); it != queue.end(); it++ ) {
+      if ( it->requiredCapacity <= capacity ) {
+          break;
+      }
+    }
+    if ( it == queue.end()) throw std::range_error ("");
 
     /* STAT */
     double diff = Time() - Previous_Time;
     sumLen += ( diff * Length() );
     outcoming++;
 
-    QueueItem tmp = queue.front();
+
+    QueueItem tmp = *it;
     tmp.GetTarget().referenceCounter--;
-    queue.pop_front();
+    queue.erase(it); // remove from queue
+
 
     /* STAT */
     Previous_Time = Time();
     double WaitTime = Time() - tmp.insertTime;
+
+    sumTime += WaitTime;
+    sumTime2 += (WaitTime * WaitTime);
     if (WaitTime < minTime) minTime = WaitTime;
     if (WaitTime > maxTime) maxTime = WaitTime;
 
@@ -256,11 +272,6 @@ void Queue::Dump()
     cout << "------------------------\n";
 }
 
-std::list<QueueItem> &Queue::QueueRawAccess()
-{
-    return queue;
-}
-
 void Queue::Output()
 {
     /*
@@ -272,38 +283,7 @@ void Queue::Output()
     double maxTime = 0;    // max time of wait in Q
     double Start_Time = 0; // time of first record
     double Previous_Time = 0;
-
-Print("+----------------------------------------------------------+\n");
-  122   Print("| QUEUE %-39s %10s |\n", Name(), StatN.Number()?"":"not used");
-  123   if (StatN.Number() > 0)
-  124   {
-  125     Print("+----------------------------------------------------------+\n");
-  126     sprintf(s," Time interval = %g - %g ",StatN.StartTime(), (double)Time);
-  127     Print(  "| %-56s |\n", s);
-  128     Print(  "|  Incoming  %-26ld                    |\n", StatN.Number());
-  129     Print(  "|  Outcoming  %-26ld                   |\n", StatDT.Number());
-  130     Print(  "|  Current length = %-26lu             |\n", size());
-  131     Print(  "|  Maximal length = %-25g              |\n", StatN.Max());
-  132     double dt = double(Time) - StatN.StartTime();
-  133     if(dt>0)
-  134     {
-  135       double mv = StatN.MeanValue();
-  136       Print(  "|  Average length = %-25g              |\n",mv);
-  137     }
-  138     if (StatDT.Number()>0)
-  139     {
-  140       Print(  "|  Minimal time = %-25g                |\n", StatDT.Min());
-  141       Print(  "|  Maximal time = %-25g                |\n", StatDT.Max());
-  142       double mv = StatDT.MeanValue();
-  143       Print(  "|  Average time = %-25g                |\n", mv);
-  144       if (StatDT.Number()>99)
-  145         Print("|  Standard deviation = %-25g          |\n",
-  146                StatDT.StdDev());
-  147     }
-  148   }
-  149   Print("+----------------------------------------------------------+\n");
     */
-
     std::cout << "+----------------------------------------------------------+" << std::endl;
     std::cout << "| " << std::left << std::setw(45) << name() << " "
               << std::setw(10) << (incoming?"":"not used") << " |" << std::endl;
@@ -316,7 +296,24 @@ Print("+----------------------------------------------------------+\n");
         std::cout << "|  Outcoming  " << std::setw(26) << outcoming << "                   |" << std::endl;
         std::cout << "|  Current length = " << std::setw(26) << Length()  << "             |" << std::endl;
         std::cout << "|  Maximal length = " << std::setw(26) << maxLen  << "             |" << std::endl;
+        double dt = Time() - Start_Time;
+        if(dt>0) {
+            ss.str(std::string()); // clear
+            ss << sumLen/dt;
+            std::cout << "|  Average length = " << std::setw(25) << ss.str() << "              |" << std::endl;
+        }
+        if (outcoming) {
+            std::cout << "|  Minimal time = " << std::setw(25) << minTime  << "                |" << std::endl;
+            std::cout << "|  Maximal time = " << std::setw(25) << maxTime  << "                |" << std::endl;
+            double average = sumTime/double(outcoming);
+            std::cout << "|  Average time = " << std::setw(25) << average << "                |" << std::endl;
+            if (outcoming > 99) {
+                double stdDev = std::sqrt( (sumTime2-outcoming*average*average)/(outcoming-1) );
+                std::cout << "|  Standard deviation = " << std::setw(25) << stdDev  << "          |" << std::endl;
+            }
+        }
     }
+    std::cout << "+----------------------------------------------------------+" << std::endl;
 }
 
 
@@ -404,7 +401,8 @@ void Facility::Output()
          << "Number of requests: " << stats.NumRecords() << endl
          << "Average utilization: " << tStats.Avg() << endl
          << "+---------------------------+" << endl;
-    Q1.Output();
+    if (Q1.hasOutput()) Q1.Output();
+    if (Q2.hasOutput()) Q2.Output();
 
 }
 
@@ -453,17 +451,12 @@ void Store::Leave(int capacity)
     freeCounter += capacity;
     if (Q.Empty()) return;
     /* iterate through Q and get first with required capacity < freeCapacity */
-    std::list<QueueItem> &queue = Q.QueueRawAccess();
-
-    for( auto it = queue.begin(); it != queue.end(); it++ ) {
-      if ( it->requiredCapacity <= Free() ) {
-          freeCounter -= it->requiredCapacity; // enter
-          it->GetTarget().scheduleAt(Time(), it->GetPtr()); // activate
-          queue.erase(it); // remove from queue
-          it->GetTarget().referenceCounter--;
-          break;
-      }
-    }
+     try{
+        QueueItem item = Q.GetFirst(Free());
+        freeCounter -= item.requiredCapacity;
+        item.GetTarget().scheduleAt(Time(), item.GetPtr()); // activate
+    }catch (std::range_error)
+    {}
     // didnt find anyone with required capacity < freeCapacity
 }
 

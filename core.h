@@ -263,7 +263,7 @@ public:
         if ( this->priority < item2.priority ) return false; // servisna priorita
         if ( this->priority == item2.priority )
         {
-            if ( this->target_object->GetProcPrio() <= item2.GetTarget().GetProcPrio() )
+            if ( this->target_object->GetProcPrio() < item2.GetTarget().GetProcPrio() )
                 return false;
             else
                 return true;
@@ -285,6 +285,8 @@ private:
     unsigned int sumLen = 0;   // calculate the average queue length
     double minTime = DBL_MAX;
     double maxTime = 0;    // max time of wait in Q
+    double sumTime = 0;
+    double sumTime2 = 0;
     double Start_Time = 0; // time of first record
     double Previous_Time = 0;
 public:
@@ -302,11 +304,11 @@ public:
     int Length() { return queue.size(); }
     std::string name() {return _name;}
     void Insert(QueueItem item);
-    QueueItem GetFirst();
+    QueueItem GetFirst(int capacity = 0);
     QueueItem& Front();
     bool isPresent( MetaEntity &obj );
     void Dump();
-    std::list<QueueItem>& QueueRawAccess();
+    bool hasOutput (){return incoming;}
     void Output();
 
 };
