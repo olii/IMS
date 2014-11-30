@@ -99,7 +99,6 @@ class TimeStats
 public:
     TimeStats();
     TimeStats(std::string name_);
-    bool Busy() { return busy; }
     double Avg() const;
     double Min() const {return min;}
     double Max() const {return max;}
@@ -352,9 +351,13 @@ class Store
 public:
     Store( int _cap = 1 ): capacity(_cap), freeCounter(_cap){
         id = Internal::GenerateID(); _name = "Store_" + std::to_string(id);
+        startTime = Time();
+        minFree = capacity;
     }
     Store( std::string name, int _cap = 1): capacity(_cap), _name(name), freeCounter(_cap){
         id = Internal::GenerateID();
+        startTime = Time();
+        minFree = capacity;
     }
 
     int Free(){ return freeCounter; }
@@ -365,7 +368,8 @@ public:
     std::string name(){return _name;}
     int QueueLen() { return Q.Length(); }
     void Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity );
-    void Leave( int capacity );
+    void Leave( int _capacity );
+    void Output();
 
 private:
     int capacity;
@@ -373,6 +377,13 @@ private:
     std::string _name;
     int freeCounter;
     Queue Q;
+
+    /* TODO statisticy objekt*/
+    double startTime = 0;
+    int enterCount = 0;
+    int minFree = 0;
+    double sumCap = 0;
+    double previousTime = 0;
 };
 
 

@@ -430,11 +430,12 @@ void Process::Leave(Store &s, int capacity)
 
 void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
 {
+    //std::cout << "Store enterred bz process " <<obj->name() << std::endl;
     //if ( _capacity > capacity ) abort();
     if ( _capacity > capacity )
         throw std::runtime_error( name() + " has maximal capacity " +std::to_string(capacity) +
                                   "but entered with " + std::to_string(_capacity) );
-    if ( Free() < capacity )
+    if ( Free() < _capacity )
     {
         QueueItem item = QueueItem(*obj, callback );
         item.requiredCapacity = _capacity;
@@ -442,22 +443,76 @@ void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
         obj->Passivate();
         return;
     }
-    freeCounter -= capacity;
+    /*stat*/
+    enterCount++;
+    //std::cout << "SUM = " << sumCap << " diff = " << Time() - previousTime << " Used = " <<Used() <<std::endl;
+    double diff = Time() - previousTime;
+    sumCap += ( diff * Used() );
+    //std::cout << Time() << std::endl;
+    //std::cout << "ENTER STORE avg " << sumCap/(Time() - startTime) << std::endl;
+    //std::cout << "Used() = " <<Used()  << std::endl;
+
+    previousTime = Time();
+    freeCounter -= _capacity;
+    if (minFree > Free()) minFree = Free();
     obj->scheduleAt(Time(), callback);
 }
 
-void Store::Leave(int capacity)
+void Store::Leave(int _capacity)
 {
-    freeCounter += capacity;
+    double diff = Time() - previousTime;
+    sumCap += ( diff * Used() );
+    //std::cout << Time() << std::endl;
+    //std::cout << "LEAVE STORE avg " << sumCap/(Time() - startTime) << std::endl;
+    //std::cout << "Used() = " <<Used()  << std::endl;
+
+    previousTime = Time();
+    freeCounter += _capacity;
+
     if (Q.Empty()) return;
     /* iterate through Q and get first with required capacity < freeCapacity */
-     try{
+    try
+    {
         QueueItem item = Q.GetFirst(Free());
         freeCounter -= item.requiredCapacity;
         item.GetTarget().scheduleAt(Time(), item.GetPtr()); // activate
+
+        /*stat*/
+        enterCount++;
+        previousTime = Time();
+        if (minFree > Free()) minFree = Free();
+
     }catch (std::range_error)
     {}
     // didnt find anyone with required capacity < freeCapacity
+}
+
+void Store::Output()
+{
+    using namespace std;
+    cout << "+----------------------------------------------------------+" << endl;
+    cout << "STORE " << left << setw(50) << _name << " |"<< endl;
+    cout << "+----------------------------------------------------------+" << endl;
+    stringstream ss;
+    ss << " Capacity = " << capacity << "  (" << Used() << " used, "
+       << Free() << " free) ";
+    cout << "| " << left <<setw(56) << ss.str() <<" |" <<endl;
+    if (enterCount)
+    {
+        ss.str("");
+        ss << " Time interval = " << startTime << " - " << Time();
+        std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
+
+        cout << "|  Number of Enter operations = " << setw(24) << enterCount << "   |" <<endl;
+        cout << "|  Maximal used capacity = " << setw(30) << capacity-minFree << "  |" <<endl;
+        if ( Time() > startTime ){ // prevent divide by 0
+            double avg = sumCap/(Time() - startTime);
+            cout << "|  Average used capacity = " << setw(30) << avg << "  |" <<endl;
+        }
+    }
+    cout << "+----------------------------------------------------------+" << endl;
+    if (Q.hasOutput()) Q.Output();
+    return;
 }
 
 

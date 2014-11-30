@@ -6,8 +6,6 @@
 Facility Linka("linka");
 Store sklad("sklad");
 
-int bezCekani = 0;
-int ob = 0;
 
 using namespace std;
 /*
@@ -78,33 +76,35 @@ class E : public Event
 
 class Transakce : public Process
 {
+    double t = 0;
     void Behavior()
     {
-        if (!Linka.Busy()) bezCekani++;
-        Seize(Linka, SLOT(Transakce::Behavior2));
-        //dobaVSystemu(Time - tvstup);
+        cout << name () << " entering in time " << Time() << endl;
+        Enter(sklad, SLOT(Transakce::Behavior2),1);
     }
     void Behavior2()
     {
-        ob++;
-        double obsluha;
-        obsluha = Exponential(10);
-        //cout << "doba obsluhy " << obsluha << endl;
-        scheduleAt(Time() + obsluha, SLOT(Transakce::Behavior3) );
+        cout << name () << " entered in time " << Time() << endl;
+        scheduleAt(Time() + 1, SLOT(Transakce::Behavior3) );
     }
     void Behavior3()
     {
-        //dobaObsluhy(obsluha);
-        Release(Linka);
-        //dobaVSystemu(Time - tvstup);
+        cout << name () << " leaving in time " << Time() << endl;
+        Leave(sklad, 1);
     }
 };
 
 class Generator : public Event {
     void Behavior() {
+        if(i++ == 3) return;
+        if (i == 0)
+        {
+            (new Transakce)->scheduleAt(Time());
+        }
         (new Transakce)->scheduleAt(Time());
-        scheduleAt(Time() + Exponential(11));
+        scheduleAt(Time() + 1);
     }
+    int i = 0;
 };
 
 
@@ -113,16 +113,11 @@ class Generator : public Event {
 
 int main(int argc, char* argv[])
 {
-    InitTime(0, 100000);
+    InitTime(0, 10);
     (new Generator)->scheduleAt(0);
     Run();
-/*
-    dobaObsluhy.Output();
-    dobaVSystemu.Output();
-*/
-    std::cout << "Bez cekani: " << bezCekani << std::endl;
-    cout << "ob " << ob << endl;
-    Linka.Output();
+
+    sklad.Output();
 
 
     return 0;
