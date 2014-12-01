@@ -71,7 +71,7 @@ public:
     }
 
     void Behavior() {
-        (new Lyzar(Pri))->scheduleAt(Time());
+        (new Lyzar(Pri))->scheduleAt(Time()+Exponential(Interval));
         scheduleAt(Time() + 1);
     }
 

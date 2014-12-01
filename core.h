@@ -349,12 +349,22 @@ private:
 class Store
 {
 public:
-    Store( int _cap = 1 ): capacity(_cap), freeCounter(_cap){
-        id = Internal::GenerateID(); _name = "Store_" + std::to_string(id);
+    Store( int _cap = 1 ):
+        capacity(_cap),
+        id (Internal::GenerateID()),
+        _name("Store_" + std::to_string(id)),
+        Q(_name + ".Q")
+    {
+        freeCounter = capacity;
         startTime = Time();
         minFree = capacity;
     }
-    Store( std::string name, int _cap = 1): capacity(_cap), _name(name), freeCounter(_cap){
+    Store( std::string name, int _cap = 1):
+        capacity(_cap),
+        _name(name),
+        Q(_name + ".Q")
+    {
+        freeCounter = capacity;
         id = Internal::GenerateID();
         startTime = Time();
         minFree = capacity;
