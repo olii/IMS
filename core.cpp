@@ -371,14 +371,20 @@ void Facility::Release(MetaEntity */*obj*/)
 void Facility::Output()
 {
     using namespace std;
-    cout << "+---------------------------+" << endl
-         << "FACILITY " << _name << endl
-         << "+---------------------------+" << endl
-         << "Status: " << (Busy() ? "Busy" : "not BUSY") << endl
-         << "Time interval: " << tStats.Start() << " - " << (Time())  << endl
-         << "Number of requests: " << stats.NumRecords() << endl
-         << "Average utilization: " << tStats.Avg() << endl
-         << "+---------------------------+" << endl;
+    cout << "+----------------------------------------------------------+" << std::endl
+         << "| FACILITY " << left <<setw(47) << _name << " |" << endl
+         << "+----------------------------------------------------------+" << std::endl;
+
+    if (stats.NumRecords())
+    {
+        stringstream ss;
+        ss << " Time interval = " << tStats.Start() << " - " << Time();
+        std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
+
+        cout << "|  Number of requests: " << setw(28) << stats.NumRecords() << "        |" << endl
+             << "|  Average utilization: " << setw(27) << tStats.Avg() << "        |" << endl;
+    }
+    cout << "+----------------------------------------------------------+" << std::endl;
     if (Q1.hasOutput()) Q1.Output();
     if (Q2.hasOutput()) Q2.Output();
 
@@ -458,7 +464,7 @@ void Store::Output()
 {
     using namespace std;
     cout << "+----------------------------------------------------------+" << endl;
-    cout << "STORE " << left << setw(50) << _name << " |"<< endl;
+    cout << "STORE " << left << setw(52) << _name << " |"<< endl;
     cout << "+----------------------------------------------------------+" << endl;
     stringstream ss;
     ss << " Capacity = " << capacity << "  (" << Used() << " used, "
