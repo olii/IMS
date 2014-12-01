@@ -371,9 +371,11 @@ void Facility::Release(MetaEntity */*obj*/)
 void Facility::Output()
 {
     using namespace std;
-    cout << "+----------------------------------------------------------+" << std::endl
+    cout << "+----------------------------------------------------------+" << endl
          << "| FACILITY " << left <<setw(47) << _name << " |" << endl
-         << "+----------------------------------------------------------+" << std::endl;
+         << "+----------------------------------------------------------+" << endl
+         << "|  Status = " << setw(56) << (Busy() ? "BUSY" : "not BUSY") << " |" << endl;
+
 
     if (stats.NumRecords())
     {

@@ -8,7 +8,7 @@ Facility rampa("Nakladaci rampa");
 
 int konvic = 0; // sdilena promenna - znamena pocet hotovych konvic s mlikem
 
-//Stat nalozeni("Jak dlouho ceka auto na nalozeni");
+Statistics nalozeni("Jak dlouho ceka auto na nalozeni");
 
 // cas je v minutach
 
@@ -45,8 +45,14 @@ class Auto : public Process {
     int nalozenychKonvic = 0;
     void Behavior() {
         nalozenychKonvic = 0;
-        Seize(rampa, SLOT(Auto::Behavior2)); // postavi se na rampu
+        Seize(rampa, SLOT(Auto::Behavior25)); // postavi se na rampu
     }
+    void Behavior25()
+    {
+        time = Time();
+        Behavior2();
+    }
+
     void Behavior2(){
         // bere 20 konvic
         if (nalozenychKonvic<20 && konvic ){
@@ -62,8 +68,12 @@ class Auto : public Process {
     }
     void Behavior3(){
         Release(rampa);
+        nalozeni.Record(Time()-time);
         scheduleAt(Time()+60, SLOT(Auto::Behavior));
     }
+
+private:
+    double time = 0;
 
 };
 
@@ -83,6 +93,6 @@ int main()
 
     rampa.Output();
     dojicky.Output();
-    //nalozeni.Output();
+    nalozeni.Output();
 }
 
