@@ -63,16 +63,18 @@ class Statistics
     unsigned numRecords;
     double min;
     double max;
-    double sum;     
+    double sum;
+    double sum2x;
     std::string name;
     static unsigned int id;
     
 public:	
-    Statistics();
+    Statistics(){Statistics("STATISTICS_" + std::to_string(Statistics::id++));}
     Statistics(std::string name_); 
     double Min() const;
     double Max() const;
     double Avg() const;
+    double StdDev();
     double NumRecords() { return numRecords; }
     void SetNumRecords(unsigned int val) { numRecords = val; }
     void Clear() { numRecords = min = max = sum = 0; }
@@ -85,28 +87,33 @@ public:
 
 class TimeStats
 {
-    double t_0; // start of statistics
-    double t_end; // end of statistics
-    double sum; // total time of service
-    double start_time; // start of service
-    std::string name;
+public:
     static unsigned int id;
-    bool busy;
+
+    unsigned int n; // number of samples
+    double t_0; // start of statistics
+    double sum; // total
+    double start_time; // start of statistics
     double min, max;
     // TODO rozptyl
+
+    /*helper*/
+    double previousTime;
+    double previousValue;
+    std::string name;
     
     
 public:
-    TimeStats();
-    TimeStats(std::string name_);
+    TimeStats(){
+        TimeStats("TimeStat_" + std::to_string(TimeStats::id++));
+    }
+    TimeStats(std::string name_) ;
     double Avg() const;
     double Min() const {return min;}
     double Max() const {return max;}
     double Start() { return t_0; }
-    double End() { return t_end; }
-    
-    void Init(double t0, double end) { t_0 = t0; t_end = end; }
-    void operator()(); // stat recording
+    void SampleBegin(double x);
+    void SampleEnd();
   
 };
 
@@ -277,27 +284,15 @@ class Queue
 private:
     std::list<QueueItem> queue;
     std::string _name;
-    /* TODO staticticky objekt */
     unsigned int incoming = 0;
     unsigned int outcoming = 0;
-    unsigned int maxLen = 0;
-    unsigned int sumLen = 0;   // calculate the average queue length
-    double minTime = DBL_MAX;
-    double maxTime = 0;    // max time of wait in Q
-    double sumTime = 0;
-    double sumTime2 = 0;
-    double Start_Time = 0; // time of first record
-    double Previous_Time = 0;
+    TimeStats tstats;
+    Statistics stat;
 public:
     Queue(){
         _name = "Queue_" + std::to_string(Internal::GenerateID());
-        Start_Time = Time();
-        Previous_Time = Start_Time;
     }
-    Queue(std::string name): _name(name){
-        Start_Time = Time();
-        Previous_Time = Start_Time;
-    }
+    Queue(std::string name): _name(name){ }
     bool Empty() {return queue.empty(); }
     void Clear() { queue.clear(); }
     int Length() { return queue.size(); }
@@ -356,8 +351,6 @@ public:
         Q(_name + ".Q")
     {
         freeCounter = capacity;
-        startTime = Time();
-        minFree = capacity;
     }
     Store( std::string name, int _cap = 1):
         capacity(_cap),
@@ -366,8 +359,6 @@ public:
     {
         freeCounter = capacity;
         id = Internal::GenerateID();
-        startTime = Time();
-        minFree = capacity;
     }
 
     int Free(){ return freeCounter; }
@@ -387,13 +378,9 @@ private:
     std::string _name;
     int freeCounter;
     Queue Q;
+    TimeStats tstats;
 
-    /* TODO statisticy objekt*/
-    double startTime = 0;
     int enterCount = 0;
-    int minFree = 0;
-    double sumCap = 0;
-    double previousTime = 0;
 };
 
 

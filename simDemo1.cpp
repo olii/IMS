@@ -42,7 +42,7 @@ public:
     }
     void EnterKotvy()
     {
-        scheduleAt(Time() + (0.5), SLOT(Lyzar::WaitContinue));
+        scheduleAt(Time() + Exponential(0.5), SLOT(Lyzar::WaitContinue));
     }
     void WaitContinue(){
         if (Random()<=0.1) {
@@ -71,8 +71,8 @@ public:
     }
 
     void Behavior() {
-        (new Lyzar(Pri))->scheduleAt(Time()+Exponential(Interval));
-        scheduleAt(Time() + 1);
+        (new Lyzar(Pri))->scheduleAt(Time());
+        scheduleAt(Time() + Exponential(Interval));
     }
 
     double	Interval;

@@ -175,9 +175,7 @@ void Queue::Insert(QueueItem item)
     }
 
     /* STAT */
-    double diff = Time() - Previous_Time;
-    sumLen += ( diff * Length() );
-
+    tstats.SampleEnd();
     incoming++;
 
 
@@ -199,8 +197,7 @@ void Queue::Insert(QueueItem item)
     }
 
     /* STAT */
-    if ( maxLen < queue.size() ) maxLen = Length();
-    Previous_Time = Time();
+    tstats.SampleBegin(Length());
 }
 
 QueueItem Queue::GetFirst(int capacity)
@@ -217,8 +214,7 @@ QueueItem Queue::GetFirst(int capacity)
     if ( it == queue.end()) throw std::range_error ("");
 
     /* STAT */
-    double diff = Time() - Previous_Time;
-    sumLen += ( diff * Length() );
+    tstats.SampleEnd();
     outcoming++;
 
 
@@ -228,13 +224,9 @@ QueueItem Queue::GetFirst(int capacity)
 
 
     /* STAT */
-    Previous_Time = Time();
+    tstats.SampleBegin(Length());
     double WaitTime = Time() - tmp.insertTime;
-
-    sumTime += WaitTime;
-    sumTime2 += (WaitTime * WaitTime);
-    if (WaitTime < minTime) minTime = WaitTime;
-    if (WaitTime > maxTime) maxTime = WaitTime;
+    stat.Record(WaitTime);
 
     return tmp;
 }
@@ -274,42 +266,28 @@ void Queue::Dump()
 
 void Queue::Output()
 {
-    /*
-    unsigned int incoming = 0;
-    unsigned int outcoming = 0;
-    unsigned int maxLen = 0;
-    unsigned int sumLen = 0;   // calculate the average queue length
-    double minTime = DBL_MAX;
-    double maxTime = 0;    // max time of wait in Q
-    double Start_Time = 0; // time of first record
-    double Previous_Time = 0;
-    */
     std::cout << "+----------------------------------------------------------+" << std::endl;
     std::cout << "| " << std::left << std::setw(45) << name() << " "
               << std::setw(10) << (incoming?"":"not used") << " |" << std::endl;
     if (incoming){
         std::cout << "+----------------------------------------------------------+" << std::endl;
         std::stringstream ss;
-        ss << " Time interval = " << Start_Time << " - " << Time();
+        ss << " Time interval = " << tstats.Start() << " - " << Time();
         std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
         std::cout << "|  Incoming  " << std::setw(26) << incoming <<  "                    |" << std::endl;
         std::cout << "|  Outcoming  " << std::setw(26) << outcoming << "                   |" << std::endl;
         std::cout << "|  Current length = " << std::setw(26) << Length()  << "             |" << std::endl;
-        std::cout << "|  Maximal length = " << std::setw(26) << maxLen  << "             |" << std::endl;
-        double dt = Time() - Start_Time;
+        std::cout << "|  Maximal length = " << std::setw(26)<<tstats.Max()<< "             |" << std::endl;
+        double dt = Time() - tstats.start_time;
         if(dt>0) {
-            ss.str(std::string()); // clear
-            ss << sumLen/dt;
-            std::cout << "|  Average length = " << std::setw(25) << ss.str() << "              |" << std::endl;
+            std::cout << "|  Average length = " << std::setw(25) << tstats.Avg() << "              |" << std::endl;
         }
         if (outcoming) {
-            std::cout << "|  Minimal time = " << std::setw(25) << minTime  << "                |" << std::endl;
-            std::cout << "|  Maximal time = " << std::setw(25) << maxTime  << "                |" << std::endl;
-            double average = sumTime/double(outcoming);
-            std::cout << "|  Average time = " << std::setw(25) << average << "                |" << std::endl;
+            std::cout << "|  Minimal time = " << std::setw(25) << stat.Min()<< "                |" << std::endl;
+            std::cout << "|  Maximal time = " << std::setw(25) << stat.Max()<<"                |" << std::endl;
+            std::cout << "|  Average time = " << std::setw(25) << stat.Avg() << "                |" << std::endl;
             if (outcoming > 99) {
-                double stdDev = std::sqrt( (sumTime2-outcoming*average*average)/(outcoming-1) );
-                std::cout << "|  Standard deviation = " << std::setw(25) << stdDev  << "          |" << std::endl;
+                std::cout << "|  Standard deviation = " << std::setw(25) << stat.StdDev()  << "          |" << std::endl;
             }
         }
     }
@@ -322,7 +300,7 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
     /* Simlib rewriten method */
     if ( !Busy() )
     {
-        tStats();
+        tStats.SampleBegin(1);
         stats.Record(1);
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++; // explicit increment
@@ -336,12 +314,12 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
         in.setPtr(nextcall);
         in.GetTarget().referenceCounter--; // explicit decrement
         Q2.Insert(in); // -- automaticky zvysi ref.  pocitadlo
-        tStats(); // -- vypnem tstats pre aktualneho
+        tStats.SampleEnd(); // -- vypnem tstats pre aktualneho
 
         in = QueueItem(*obj, callback,service_prio );
         obj->referenceCounter++;
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
-        tStats(); // -- zapnem tstats pre noveho
+        tStats.SampleBegin(1); // -- zapnem tstats pre noveho
         stats.Record(1);
     }
     else
@@ -357,7 +335,7 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
 void Facility::Release(MetaEntity */*obj*/)
 {
     /* Simlib rewriten method */
-    tStats();
+    tStats.SampleEnd();
     in.GetTarget().referenceCounter--;
     in.resetPtr();
     bool flag = false;
@@ -367,7 +345,7 @@ void Facility::Release(MetaEntity */*obj*/)
     if (!flag && !Q2.Empty())  // interrupt queue not empty
     {                           // seize from interrupt queue...
         in = Q2.GetFirst();// seize again
-        tStats();
+        tStats.SampleBegin(1);
         in.GetTarget().referenceCounter++;
         in.GetTarget().scheduleAt(Time() + in.remainingTime, in.GetPtr());
         //Q1.Dump();
@@ -378,7 +356,7 @@ void Facility::Release(MetaEntity */*obj*/)
     if (!Q1.Empty()) {         // input queue not empty -- seize from Q1
         in = Q1.GetFirst();// seize again
         in.GetTarget().referenceCounter++;
-        tStats();
+        tStats.SampleBegin(1);
         stats.Record(1);
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
         //Q1.Dump();
@@ -397,7 +375,7 @@ void Facility::Output()
          << "FACILITY " << _name << endl
          << "+---------------------------+" << endl
          << "Status: " << (Busy() ? "Busy" : "not BUSY") << endl
-         << "Time interval: " << tStats.Start() << " - " << (tStats.End() == -1 ? Time() : tStats.End())  << endl
+         << "Time interval: " << tStats.Start() << " - " << (Time())  << endl
          << "Number of requests: " << stats.NumRecords() << endl
          << "Average utilization: " << tStats.Avg() << endl
          << "+---------------------------+" << endl;
@@ -430,7 +408,6 @@ void Process::Leave(Store &s, int capacity)
 
 void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
 {
-    //std::cout << "Store enterred bz process " <<obj->name() << std::endl;
     //if ( _capacity > capacity ) abort();
     if ( _capacity > capacity )
         throw std::runtime_error( name() + " has maximal capacity " +std::to_string(capacity) +
@@ -444,43 +421,33 @@ void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
         return;
     }
     /*stat*/
+    tstats.SampleEnd();
     enterCount++;
-    //std::cout << "SUM = " << sumCap << " diff = " << Time() - previousTime << " Used = " <<Used() <<std::endl;
-    double diff = Time() - previousTime;
-    sumCap += ( diff * Used() );
-    //std::cout << Time() << std::endl;
-    //std::cout << "ENTER STORE avg " << sumCap/(Time() - startTime) << std::endl;
-    //std::cout << "Used() = " <<Used()  << std::endl;
+    freeCounter -= _capacity; // change capacity
+    tstats.SampleBegin(Used());
 
-    previousTime = Time();
-    freeCounter -= _capacity;
-    if (minFree > Free()) minFree = Free();
     obj->scheduleAt(Time(), callback);
 }
 
 void Store::Leave(int _capacity)
 {
-    double diff = Time() - previousTime;
-    sumCap += ( diff * Used() );
-    //std::cout << Time() << std::endl;
-    //std::cout << "LEAVE STORE avg " << sumCap/(Time() - startTime) << std::endl;
-    //std::cout << "Used() = " <<Used()  << std::endl;
-
-    previousTime = Time();
+    tstats.SampleEnd();
     freeCounter += _capacity;
+    tstats.SampleBegin(Used());
 
     if (Q.Empty()) return;
     /* iterate through Q and get first with required capacity < freeCapacity */
     try
     {
         QueueItem item = Q.GetFirst(Free());
+        tstats.SampleEnd();
+
         freeCounter -= item.requiredCapacity;
         item.GetTarget().scheduleAt(Time(), item.GetPtr()); // activate
 
         /*stat*/
+        tstats.SampleBegin(Used());
         enterCount++;
-        previousTime = Time();
-        if (minFree > Free()) minFree = Free();
 
     }catch (std::range_error)
     {}
@@ -500,14 +467,13 @@ void Store::Output()
     if (enterCount)
     {
         ss.str("");
-        ss << " Time interval = " << startTime << " - " << Time();
+        ss << " Time interval = " << tstats.Start() << " - " << Time();
         std::cout << "| " << std::setw(56) << ss.str() << " |" << std::endl;
 
         cout << "|  Number of Enter operations = " << setw(24) << enterCount << "   |" <<endl;
-        cout << "|  Maximal used capacity = " << setw(30) << capacity-minFree << "  |" <<endl;
-        if ( Time() > startTime ){ // prevent divide by 0
-            double avg = sumCap/(Time() - startTime);
-            cout << "|  Average used capacity = " << setw(30) << avg << "  |" <<endl;
+        cout << "|  Maximal used capacity = " << setw(30) << tstats.Max() << "  |" <<endl;
+        if ( Time() > tstats.Start() ){ // prevent divide by 0
+            cout << "|  Average used capacity = " << setw(30) << tstats.Avg() << "  |" <<endl;
         }
     }
     cout << "+----------------------------------------------------------+" << endl;
@@ -561,12 +527,6 @@ numRecords(0), min(0), max(0),  sum(0)
     name = name_;
 }
 
-Statistics::Statistics(): 
-numRecords(0), min(0), max(0),  sum(0)
-{
-    name = std::string("Stat ") + std::to_string(++id);
-}
-
 
 double Statistics::Min() const
 {
@@ -593,6 +553,11 @@ double Statistics::Avg() const
         throw std::logic_error("Statistics " + name + ": No records.");
 }
 
+double Statistics::StdDev()
+{
+    return std::sqrt( (sum2x-numRecords*Avg()*Avg())/(numRecords-1.0) );
+}
+
 
 void Statistics::Output()
 {   
@@ -606,6 +571,7 @@ void Statistics::Output()
 void Statistics::Record(double val)
 {
     sum += val;
+    sum2x += (val*val);
     if(++numRecords == 1) 
         min = max = val;
     else 
@@ -629,53 +595,38 @@ void GarbageCollector::Free(){
 }
 
 /** TimeStats **/
-TimeStats::TimeStats()
-{
-    t_0 = sum = min = max = 0;
-    start_time = t_end = -1;
-    busy = false;
-    name = std::string("TimeStat ") + std::to_string(++id);
-    
-}
-
 
  TimeStats::TimeStats(std::string name_) :
-  t_0(0), t_end(-1), sum(0), 
-  start_time(-1), busy(false),
-  min(0), max(0)
+  t_0(Time()), sum(0),
+  start_time(Time()),
+  min(0), max(0),
+   previousTime(Time()), previousValue(0)
  {
     name = name_;
  }
 
-void TimeStats::operator()()
-{
-   // std::cout << "Time() " << Time() << " start_time " << start_time << "t_end: " << t_end << std::endl; 
-    if(t_end!=-1 && Time() > t_end)
-      return;
-
-    if(start_time == -1) // start of service
-    {
-        start_time = Time();
-        busy = true;
-    }
-    else // end of service
-    {
-        double time_of_service = Time() - start_time;
-        if(time_of_service<min) min = time_of_service;
-        if(time_of_service>max) max = time_of_service;
-        
-        
-        sum += (Time() - start_time);
-        start_time = -1;
-        busy = false;
-    }
-}
-
 double TimeStats::Avg() const
 {
-    if(start_time == -1) // noone in service
-         return sum/Time();
-         
-    else // somebody in service
-        return (sum + Time() - start_time) / Time();
+    return sum/Time();
+}
+
+void TimeStats::SampleBegin(double x)
+{
+    previousTime = Time();
+    previousValue = x;
+    if ( n == 0 ){
+        min = max = x;
+    } else{
+        if ( x > max ) max=x;
+        if ( x < min ) min=x;
+    }
+
+}
+
+void TimeStats::SampleEnd()
+{
+    double diff = Time() - previousTime;
+    double val = diff * previousValue;
+    sum += val;
+    n++;
 }
