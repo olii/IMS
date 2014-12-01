@@ -562,9 +562,23 @@ double Statistics::StdDev()
 void Statistics::Output()
 {   
     using namespace std;
-    cout << "+-------------+" << endl;
-    cout << name + " output (TODO)" << endl;
-    cout << "+-------------+" << endl;
+    cout << "+----------------------------------------------------------+" << endl;
+    cout << "| STATISTIC "<< left <<setw(46) << name << " |"<< endl;
+    cout << "+----------------------------------------------------------+" << endl;
+    if (NumRecords() == 0)
+    {
+        cout << "|  No record                                               |" << endl;
+    } else
+    {
+        cout << "|  Min = " << setw(15) <<Min()<< "         Max = " << setw(15) << Max()<< "     |" << endl;
+        cout << "|  Number of records = " << setw(26) <<NumRecords()<< "          |" << endl;
+        cout << "|  Average value = " << setw(25) <<Avg()<< "               |" << endl;
+        if (NumRecords() >99 )
+        {
+            cout << "|  Standard deviation = " << setw(25) <<StdDev()<< "          |" << endl;
+        }
+    }
+    cout << "+----------------------------------------------------------+" << endl;
 }
 
 
@@ -629,4 +643,59 @@ void TimeStats::SampleEnd()
     double val = diff * previousValue;
     sum += val;
     n++;
+}
+
+/* SIMLIB rewrite*/
+void Histogram::Sample(double x)
+{
+    stat.Record(x);
+
+    if ( x < low )
+    {
+        data[0]++;
+        return;
+    }
+    unsigned int ix = static_cast<unsigned int>((x-low)/step);
+    if ( ix > static_cast<unsigned>(count))
+        data[count+1]++;
+    else
+        data[ix+1]++;
+}
+
+void Histogram::Output()
+{
+    using namespace std;
+
+    cout << "+----------------------------------------------------------+" << endl;
+    cout << "| HISTOGRAM " << left << setw(46)<< name <<" |" << endl;
+    cout << "+----------------------------------------------------------+" << endl;
+    stat.Output();
+
+    long int sum = 0;
+    for (int n : data)
+       sum += n;
+    //cout << sum << endl;
+    if (sum == 0) return;
+
+    cout << "|    from    |     to     |     n    |   rel    |   sum    |" << endl;
+    cout << "+------------+------------+----------+----------+----------+" << endl;
+
+    double from,to;
+    long s;
+    from = low;
+    s = data[0];
+    for (int i=1; i<=count; i++)
+    {
+        unsigned x = data[i];
+        s += x;
+        to = from+step;
+        cout << right ;
+        cout << "| " << setprecision(3) << setw(10) << from << " | "
+                     << setprecision(3) << setw(10) << to   << " | "
+                     <<                    setw(8)  << x    << " | "
+                     << setprecision(3) << setw(8) << (double)x/sum  << " | "
+                     << setprecision(5) << setw(8) << (double)s/sum  << " |" << endl;
+        from = to;
+    }
+    cout << "+------------+------------+----------+----------+----------+" << endl;
 }

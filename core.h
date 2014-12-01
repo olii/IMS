@@ -77,10 +77,36 @@ public:
     double StdDev();
     double NumRecords() { return numRecords; }
     void SetNumRecords(unsigned int val) { numRecords = val; }
-    void Clear() { numRecords = min = max = sum = 0; }
-    virtual void Output(); // will be reimplemented in facility, store and queue 
+    void Clear() { numRecords = min = max = sum = sum2x = 0; }
+    void Output();
     void Record(double val); // stat recording
 };
+
+class Histogram
+{
+public:
+    Histogram(std::string _name, double _low, double _step, unsigned _count):
+        low(_low), step(_step), count(_count), name(_name)
+    {
+        data.resize(count+2);
+    }
+    void Sample(double x);
+    double Low() {return low;}
+    double High() {return low + step*count;}
+    double Step() {return step;}
+    int Count() {return count;}
+    void Output();
+
+   
+private:
+    std::vector<int> data;
+    double low;
+    double step;
+    int count;
+    std::string name;
+    Statistics stat;
+};
+
 
     
 
