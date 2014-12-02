@@ -1,4 +1,10 @@
-#include "core.h"
+/*
+ * Simulacny model kravina
+ *
+ */
+
+
+#include "simulator.h"
 #include <iostream>
 
 const int p_krav = 100;

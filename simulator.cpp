@@ -10,7 +10,7 @@
 	
 
 
-#include "core.h"
+#include "simulator.h"
 
 namespace Internal {
     long double Time = 0; // simulation time
@@ -101,30 +101,20 @@ void Calendar::Schedule(MetaEntity &t, MetaEntity::Fptr ptr, double time, uint8_
 
 void Run()
 {
-    std::cout << std::endl << "====== RUN ======" << std::endl;
     cout.precision(6);
     try
     {
         while( !Calendar::instance().Empty() )
         {
-            //Calendar::instance().Dump();
             CalendarItem item = Calendar::instance().Next();
             if ( item.GetTime() > Internal::TimeStop )
             {
                 Calendar::instance().Clear();
-                std::cout << std::endl << "====== TIMEOUT ======" << std::endl;
                 break;
             }
             Internal::Time = item.GetTime();
-            //std::cout << "-------------------\n";
-            //std::cout << item.GetTarget().name() << "(Scheduled at: " << item.GetTime() << " prio=" << int(item.GetPriority()) << ")" << std::endl;
-            //std::cout << "Current simulation time: " << std::fixed  << Internal::Time << "\n";
-            //std::cout << "EVENT: " << item.GetTarget().name() <<  "\n";
-            //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
             item.GetTarget().referenceCounter--;
             item.Execute(); // event->Behavior();
-            //std::cout << "process has reference counter: " << item.GetTarget().referenceCounter << std::endl;
-            //std::cout << "-------------------\n";
             if (item.GetTarget().referenceCounter == 0)
             {
                 GarbageCollector::instance().removePtr(&item.GetTarget());
@@ -153,19 +143,7 @@ void InitTime(double start, double end)
     Internal::TimeStop = end;
 }
 
-/*
-    unsigned int incoming = 0;
-    unsigned int outcoming = 0;
 
-    unsigned int maxLen = 0;
-    unsigned int sumLen = 0;   // calculate the average queue length
-
-    double minTime = 0;
-    double maxTime = 0;    // max time of wait in Q
-
-    double Start_Time = 0; // time of first record
-    double Previous_Time = -1;
-    */
 void Queue::Insert(QueueItem item)
 {
     if (isPresent(item.GetTarget()))
@@ -327,9 +305,6 @@ void Facility::Seize(MetaEntity *obj, MetaEntity::Fptr callback, uint8_t service
         Q1.Insert(QueueItem(*obj, callback,service_prio ));
         obj->Passivate();
     }
-    //Q1.Dump();
-    //Q2.Dump();
-    //cout << "Queue status Q1:" << Q1.Length() << ", Q2:" << Q2.Length() << "\n";
 }
 
 void Facility::Release(MetaEntity */*obj*/)
@@ -348,9 +323,6 @@ void Facility::Release(MetaEntity */*obj*/)
         tStats.SampleBegin(1);
         in.GetTarget().referenceCounter++;
         in.GetTarget().scheduleAt(Time() + in.remainingTime, in.GetPtr());
-        //Q1.Dump();
-        // Q2.Dump();
-        //cout << "Queue status Q1:" << Q1.Length() << ", Q2:" << Q2.Length() << "\n";
         return;
     }
     if (!Q1.Empty()) {         // input queue not empty -- seize from Q1
@@ -359,13 +331,8 @@ void Facility::Release(MetaEntity */*obj*/)
         tStats.SampleBegin(1);
         stats.Record(1);
         in.GetTarget().scheduleAt(Time(), in.GetPtr());
-        //Q1.Dump();
-        //Q2.Dump();
-        //cout << "Queue status Q1:" << Q1.Length() << ", Q2:" << Q2.Length() << "\n";
         return;
     }
-    //Q1.Dump();
-    //Q2.Dump();
 }
 
 void Facility::Output()
@@ -416,7 +383,6 @@ void Process::Leave(Store &s, int capacity)
 
 void Store::Enter(MetaEntity *obj, MetaEntity::Fptr callback, int _capacity)
 {
-    //if ( _capacity > capacity ) abort();
     if ( _capacity > capacity )
         throw std::runtime_error( name() + " has maximal capacity " +std::to_string(capacity) +
                                   "but entered with " + std::to_string(_capacity) );
@@ -606,10 +572,8 @@ void Statistics::Record(double val)
 }
 
 void GarbageCollector::Free(){
-    //std::cout << "GarbageCollector Free()\n";
-    //std::cout << "database count " << database.size() << "\n";
+
     for( auto it = database.begin(); it != database.end(); it++ ) {
-        //std :: cout << "Deleting object" << (*it)->name() << "\n";
         delete *it;
     }
 
@@ -682,7 +646,7 @@ void Histogram::Output()
     long int sum = 0;
     for (int n : data)
        sum += n;
-    //cout << sum << endl;
+
     if (sum == 0) return;
 
     cout << "|    from    |     to     |     n    |   rel    |   sum    |" << endl;

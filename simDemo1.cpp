@@ -1,4 +1,10 @@
-#include "core.h"
+/*
+ * Simulacny model vleku
+ *
+ */
+
+
+#include "simulator.h"
 #include <iostream>
 
 const double jedna_cesta = 4.0;
